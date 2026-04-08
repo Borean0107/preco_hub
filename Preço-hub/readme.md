@@ -11,3 +11,4 @@ Projeto frontend para comparação de preços entre mercados.
 - `index.html` (home)
 - `login.html`
 - `cadastro.html`
+.
