@@ -15,7 +15,8 @@ try{
 } catch(PDOException $e) {
     http_response_code(500);
     echo json_encode([
-        "succsess" => false,
+        "success" => false,
         "message" => "Erro na conexão com o banco."
     ], JSON_UNESCAPED_UNICODE);
+    exit;
 }

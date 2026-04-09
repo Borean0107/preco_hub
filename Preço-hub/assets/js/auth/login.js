@@ -1,4 +1,3 @@
-const STORAGE_USUARIOS = "usuarios";
 const STORAGE_USUARIO_LOGADO = "usuarioLogado";
 
 const loginForm = document.getElementById("loginForm");
@@ -17,11 +16,6 @@ function esconderMensagemLogin() {
 
     mensagemLogin.className = "alert d-none";
     mensagemLogin.textContent = "";
-}
-
-function lerUsuarios() {
-    const dados = localStorage.getItem(STORAGE_USUARIOS);
-    return dados ? JSON.parse(dados) : [];
 }
 
 function salvarUsuarioLogado(usuario) {
@@ -45,27 +39,32 @@ if (loginForm) {
             return;
         }
 
-        const usuarios = lerUsuarios();
+        const formData = new FormData();
+        formData.append("email", email);
+        formData.append("senha", senha);
 
-        const usuario = usuarios.find(function (item) {
-            return item.email.toLowerCase() === email && item.senha === senha;
+        fetch("backend/auth/login.php", {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (data.success) {
+                salvarUsuarioLogado(data.data);
+                mostrarMensagemLogin("success", data.message || "Login realizado com sucesso.");
+                setTimeout(function () {
+                    window.location.href = "index.html";
+                }, 1000);
+            } else {
+                mostrarMensagemLogin("danger", data.message || "Email ou senha inválidos.");
+            }
+        })
+        .catch(function (error) {
+            console.error(error);
+            mostrarMensagemLogin("danger", "Erro ao fazer login. Tente novamente.");
         });
-
-        if (!usuario) {
-            mostrarMensagemLogin("danger", "Email ou senha inválidos.");
-            return;
-        }
-
-        salvarUsuarioLogado({
-            id: usuario.id,
-            nome: usuario.nome,
-            email: usuario.email
-        });
-
-        mostrarMensagemLogin("success", "Login realizado com sucesso.");
-
-        setTimeout(function () {
-            window.location.href = "index.html";
-        }, 1000);
     });
 }

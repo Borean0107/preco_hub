@@ -1,5 +1,3 @@
-const STORAGE_USUARIOS = "usuarios";
-
 const registerForm = document.getElementById("registerForm");
 const mensagemCadastro = document.getElementById("mensagemCadastro");
 
@@ -16,15 +14,6 @@ function esconderMensagemCadastro() {
 
     mensagemCadastro.className = "alert d-none";
     mensagemCadastro.textContent = "";
-}
-
-function lerUsuarios() {
-    const dados = localStorage.getItem(STORAGE_USUARIOS);
-    return dados ? JSON.parse(dados) : [];
-}
-
-function salvarUsuarios(usuarios) {
-    localStorage.setItem(STORAGE_USUARIOS, JSON.stringify(usuarios));
 }
 
 function emailValido(email) {
@@ -67,32 +56,33 @@ if (registerForm) {
             return;
         }
 
-        const usuarios = lerUsuarios();
+        const formData = new FormData();
+        formData.append("nome", nome);
+        formData.append("email", email);
+        formData.append("senha", senha);
 
-        const emailJaExiste = usuarios.some(function (usuario) {
-            return usuario.email.toLowerCase() === email;
+        fetch("backend/auth/register.php", {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (data.success) {
+                mostrarMensagemCadastro("success", data.message || "Cadastro realizado com sucesso.");
+                registerForm.reset();
+                setTimeout(function () {
+                    window.location.href = "login.html";
+                }, 1200);
+            } else {
+                mostrarMensagemCadastro("danger", data.message || "Erro ao cadastrar.");
+            }
+        })
+        .catch(function (error) {
+            console.error(error);
+            mostrarMensagemCadastro("danger", "Erro ao cadastrar. Tente novamente.");
         });
-
-        if (emailJaExiste) {
-            mostrarMensagemCadastro("danger", "Este email já está cadastrado.");
-            return;
-        }
-
-        usuarios.push({
-            id: Date.now(),
-            nome: nome,
-            email: email,
-            senha: senha
-        });
-
-        salvarUsuarios(usuarios);
-
-        mostrarMensagemCadastro("success", "Cadastro realizado com sucesso.");
-
-        registerForm.reset();
-
-        setTimeout(function () {
-            window.location.href = "login.html";
-        }, 1200);
     });
 }
