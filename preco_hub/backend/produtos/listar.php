@@ -37,17 +37,16 @@ foreach ($rows as $row) {
 if (!isset($produtos[$id])){
     $produtos[$id] = [
         "id_produto"=> (int) $row["id_produto"],
-        "nome_produto"=> (int) $row["nome_produto"],
-        "imagem_produto"=> (int) $row["imagem_produto"],
-        "nome_fabricante"=> (int) $row["nome_fabricante"],
-        "nome_categoria"=> (int) $row["nome_categoria"],
+        "nome_produto"=> $row["nome_produto"],
+        "imagem_produto"=> $row["imagem_produto"],
+        "nome_fabricante"=> $row["nome_fabricante"],
+        "nome_categoria"=> $row["nome_categoria"],
         "precos"=>[]
     ];
-}    
-$produtos[$id]["precos"][]=[
+}
+$produtos[$id]["precos"][] = [
     "mercado" => $row["nome_mercado"],
-    "preco" => (float)
-$row["preco_produto_mercado"]
+    "preco" => (float) $row["preco_produto_mercado"]
 ];
 }
 jsonResponse(true, "Produtos listados com sucesso.", array_values($produtos));

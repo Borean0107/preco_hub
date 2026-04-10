@@ -1,44 +1,25 @@
-const STORAGE_PRODUTOS = "produtosCadastrados";
+const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
+const API_SALVAR_PRODUTO = "backend/produtos/salvar.php";
 
 const formAdicionarProduto = document.getElementById("formAdicionarProduto");
-const produtoEditandoId = document.getElementById("produtoEditandoId");
 const nomeProduto = document.getElementById("nomeProduto");
 const marcaProduto = document.getElementById("marcaProduto");
 const categoriaProduto = document.getElementById("categoriaProduto");
 const imagemProduto = document.getElementById("imagemProduto");
-
-const precoSavegnago = document.getElementById("precoSavegnago");
-const precoFavetta = document.getElementById("precoFavetta");
-const precoPagueMenos = document.getElementById("precoPagueMenos");
+const mercadoNomeCampos = document.querySelectorAll("input[name='mercadoNome[]']");
+const mercadoPrecoCampos = document.querySelectorAll("input[name='mercadoPreco[]']");
 
 const previewImagem = document.getElementById("previewImagem");
 const textoPreview = document.getElementById("textoPreview");
 const botaoSalvarProduto = document.getElementById("botaoSalvarProduto");
-const botaoCancelarEdicao = document.getElementById("botaoCancelarEdicao");
 const mensagemSucesso = document.getElementById("mensagemSucesso");
 const listaProdutosAdicionados = document.getElementById("listaProdutosAdicionados");
-
-function normalizarTexto(texto) {
-    return String(texto || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-}
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL"
     });
-}
-
-function lerProdutos() {
-    const dados = localStorage.getItem(STORAGE_PRODUTOS);
-    return dados ? JSON.parse(dados) : [];
-}
-
-function salvarProdutos(produtos) {
-    localStorage.setItem(STORAGE_PRODUTOS, JSON.stringify(produtos));
 }
 
 function resetarPreview() {
@@ -70,148 +51,104 @@ function mostrarMensagem(texto, tipo) {
     if (!mensagemSucesso) return;
 
     const tipoFinal = tipo || "success";
-
     mensagemSucesso.textContent = texto;
     mensagemSucesso.className = "alert alert-" + tipoFinal + " mt-4";
     mensagemSucesso.classList.remove("d-none");
 
     setTimeout(function () {
         mensagemSucesso.classList.add("d-none");
-    }, 2500);
+    }, 3000);
 }
 
 function limparFormulario() {
     if (!formAdicionarProduto) return;
 
     formAdicionarProduto.reset();
-
-    if (produtoEditandoId) {
-        produtoEditandoId.value = "";
-    }
+    resetarPreview();
 
     if (botaoSalvarProduto) {
         botaoSalvarProduto.textContent = "Salvar produto";
     }
-
-    if (botaoCancelarEdicao) {
-        botaoCancelarEdicao.classList.add("d-none");
-    }
-
-    resetarPreview();
 }
 
-function obterPrecosFormulario() {
-    return [
-        {
-            mercado: "Savegnago",
-            preco: parseFloat(precoSavegnago.value || "0")
-        },
-        {
-            mercado: "Favetta",
-            preco: parseFloat(precoFavetta.value || "0")
-        },
-        {
-            mercado: "Pague Menos",
-            preco: parseFloat(precoPagueMenos.value || "0")
+function obterMercadosFormulario() {
+    const mercados = [];
+
+    mercadoNomeCampos.forEach(function (campo, index) {
+        const nomeMercado = campo.value.trim();
+        const precoMercado = mercadoPrecoCampos[index] ? mercadoPrecoCampos[index].value.trim() : "";
+
+        if (nomeMercado || precoMercado) {
+            mercados.push({
+                mercado: nomeMercado,
+                preco: precoMercado
+            });
         }
-    ];
+    });
+
+    return mercados;
 }
 
-function ordenarPrecos(precos) {
-    return precos.slice().sort(function (a, b) {
-        return Number(a.preco) - Number(b.preco);
+function validarFormulario() {
+    const nome = nomeProduto.value.trim();
+    const marca = marcaProduto.value.trim();
+    const categoria = categoriaProduto.value;
+    const imagem = imagemProduto.files[0];
+    const mercados = obterMercadosFormulario();
+
+    if (!nome || !marca || !categoria) {
+        mostrarMensagem("Preencha nome, marca e categoria.", "warning");
+        return false;
+    }
+
+    if (!imagem) {
+        mostrarMensagem("Selecione uma imagem para o produto.", "warning");
+        return false;
+    }
+
+    if (mercados.length === 0) {
+        mostrarMensagem("Informe pelo menos um mercado e preço.", "warning");
+        return false;
+    }
+
+    const mercadoInvalido = mercados.some(function (item) {
+        return !item.mercado || item.mercado.length === 0 || isNaN(Number(item.preco)) || Number(item.preco) <= 0;
     });
+
+    if (mercadoInvalido) {
+        mostrarMensagem("Informe nomes e preços válidos para todos os mercados.", "warning");
+        return false;
+    }
+
+    return true;
 }
 
-function editarProduto(id) {
-    const produtos = lerProdutos();
-    const produto = produtos.find(function (item) {
-        return item.id === id;
-    });
-
-    if (!produto) return;
-
-    if (produtoEditandoId) {
-        produtoEditandoId.value = produto.id;
-    }
-
-    if (nomeProduto) nomeProduto.value = produto.nome || "";
-    if (marcaProduto) marcaProduto.value = produto.marca || "";
-    if (categoriaProduto) categoriaProduto.value = produto.categoria || "";
-
-    const precoMercadoSavegnago = produto.precos.find(function (p) {
-        return p.mercado === "Savegnago";
-    });
-
-    const precoMercadoFavetta = produto.precos.find(function (p) {
-        return p.mercado === "Favetta";
-    });
-
-    const precoMercadoPagueMenos = produto.precos.find(function (p) {
-        return p.mercado === "Pague Menos";
-    });
-
-    if (precoSavegnago) precoSavegnago.value = precoMercadoSavegnago ? precoMercadoSavegnago.preco : "";
-    if (precoFavetta) precoFavetta.value = precoMercadoFavetta ? precoMercadoFavetta.preco : "";
-    if (precoPagueMenos) precoPagueMenos.value = precoMercadoPagueMenos ? precoMercadoPagueMenos.preco : "";
-
-    preencherPreview(produto.imagem);
-
-    if (botaoSalvarProduto) {
-        botaoSalvarProduto.textContent = "Atualizar produto";
-    }
-
-    if (botaoCancelarEdicao) {
-        botaoCancelarEdicao.classList.remove("d-none");
-    }
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-}
-
-function excluirProduto(id) {
-    const confirmar = window.confirm("Tem certeza que deseja excluir este produto?");
-    if (!confirmar) return;
-
-    const produtos = lerProdutos().filter(function (produto) {
-        return produto.id !== id;
-    });
-
-    salvarProdutos(produtos);
-
-    if (produtoEditandoId && Number(produtoEditandoId.value) === id) {
-        limparFormulario();
-    }
-
-    renderizarProdutosCadastrados();
-    mostrarMensagem("Produto excluído com sucesso.", "success");
-}
-
-function ativarBotoesAcao() {
-    const botoesEditar = document.querySelectorAll(".botao-editar");
-    const botoesExcluir = document.querySelectorAll(".botao-excluir");
-
-    botoesEditar.forEach(function (botao) {
-        botao.addEventListener("click", function () {
-            editarProduto(Number(botao.dataset.id));
+async function buscarProdutos() {
+    try {
+        const response = await fetch(API_LISTAR_PRODUTOS, {
+            headers: {
+                "Accept": "application/json"
+            }
         });
-    });
 
-    botoesExcluir.forEach(function (botao) {
-        botao.addEventListener("click", function () {
-            excluirProduto(Number(botao.dataset.id));
-        });
-    });
+        if (!response.ok) {
+            throw new Error("Não foi possível carregar os produtos.");
+        }
+
+        const data = await response.json();
+        return data.success ? data.data : [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 }
 
-function renderizarProdutosCadastrados() {
+async function renderizarProdutosCadastrados() {
     if (!listaProdutosAdicionados) return;
 
-    const produtos = lerProdutos();
+    const produtos = await buscarProdutos();
 
-    if (produtos.length === 0) {
+    if (!produtos || produtos.length === 0) {
         listaProdutosAdicionados.className = "produtos-adicionados-vazio text-muted";
         listaProdutosAdicionados.innerHTML = "Nenhum produto cadastrado nesta tela ainda.";
         return;
@@ -219,17 +156,19 @@ function renderizarProdutosCadastrados() {
 
     listaProdutosAdicionados.className = "";
     listaProdutosAdicionados.innerHTML = produtos.map(function (produto) {
-        const precosOrdenados = ordenarPrecos(produto.precos);
+        const precosOrdenados = produto.precos ? produto.precos.slice().sort(function (a, b) {
+            return Number(a.preco) - Number(b.preco);
+        }) : [];
 
         return `
             <div class="produto-adicionado-item">
                 <div class="produto-adicionado-topo">
                     <div class="produto-adicionado-info">
-                        <h3>${produto.nome}</h3>
-                        <p class="mb-1"><strong>Marca:</strong> ${produto.marca || "-"}</p>
-                        <p class="mb-0"><strong>Categoria:</strong> ${produto.categoria || "-"}</p>
+                        <h3>${produto.nome_produto}</h3>
+                        <p class="mb-1"><strong>Marca:</strong> ${produto.nome_fabricante || "-"}</p>
+                        <p class="mb-0"><strong>Categoria:</strong> ${produto.nome_categoria || "-"}</p>
                     </div>
-                    <img src="${produto.imagem}" alt="${produto.nome}">
+                    <img src="${produto.imagem_produto}" alt="${produto.nome_produto}">
                 </div>
 
                 <ul class="list-group mt-3">
@@ -244,95 +183,78 @@ function renderizarProdutosCadastrados() {
                 </ul>
 
                 <div class="d-flex gap-2 flex-wrap mt-3">
-                    <button class="btn btn-sm btn-outline-primary botao-editar" data-id="${produto.id}">
-                        Editar
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger botao-excluir" data-id="${produto.id}">
-                        Excluir
+                    <button class="btn btn-sm btn-outline-danger botao-remover" data-id="${produto.id_produto}">
+                        Remover
                     </button>
                 </div>
             </div>
         `;
     }).join("");
 
-    ativarBotoesAcao();
+    ativarBotoesRemover();
 }
 
-function validarFormulario(nome, marca, categoria, precos, imagemFinal, idEditando) {
-    if (!nome || !marca || !categoria) {
-        mostrarMensagem("Preencha nome, marca e categoria.", "warning");
-        return false;
-    }
+function ativarBotoesRemover() {
+    const botoesRemover = document.querySelectorAll(".botao-remover");
 
-    const algumPrecoInvalido = precos.some(function (item) {
-        return isNaN(item.preco) || item.preco <= 0;
+    botoesRemover.forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            const id = Number(botao.dataset.id);
+            if (id) {
+                removerProduto(id);
+            }
+        });
     });
-
-    if (algumPrecoInvalido) {
-        mostrarMensagem("Informe preços válidos para todos os mercados.", "warning");
-        return false;
-    }
-
-    if (!imagemFinal && !idEditando) {
-        mostrarMensagem("Selecione uma imagem para o produto.", "warning");
-        return false;
-    }
-
-    return true;
 }
 
-function salvarProduto(imagemFinal) {
-    const idEditando = produtoEditandoId && produtoEditandoId.value
-        ? Number(produtoEditandoId.value)
-        : null;
-
-    const nome = nomeProduto ? nomeProduto.value.trim() : "";
-    const marca = marcaProduto ? marcaProduto.value.trim() : "";
-    const categoria = categoriaProduto ? categoriaProduto.value : "";
-    const precos = obterPrecosFormulario();
-
-    const produtos = lerProdutos();
-
-    const duplicado = produtos.some(function (produto) {
-        return normalizarTexto(produto.nome) === normalizarTexto(nome) && produto.id !== idEditando;
-    });
-
-    if (duplicado) {
-        mostrarMensagem("Já existe um produto com esse nome.", "danger");
-        return;
-    }
-
-    if (!validarFormulario(nome, marca, categoria, precos, imagemFinal, idEditando)) {
-        return;
-    }
-
-    const produtoFinal = {
-        id: idEditando || Date.now(),
-        nome: nome,
-        marca: marca,
-        categoria: categoria,
-        imagem: imagemFinal,
-        precos: precos
-    };
-
-    let novaLista;
-
-    if (idEditando) {
-        novaLista = produtos.map(function (produto) {
-            return produto.id === idEditando ? produtoFinal : produto;
+async function removerProduto(idProduto) {
+    try {
+        const response = await fetch("backend/produtos/remover.php", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            },
+            body: new URLSearchParams({ id_produto: idProduto })
         });
 
-        mostrarMensagem("Produto atualizado com sucesso.", "success");
-    } else {
-        novaLista = produtos.slice();
-        novaLista.push(produtoFinal);
+        const data = await response.json();
 
-        mostrarMensagem("Produto salvo com sucesso.", "success");
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Erro ao remover produto.");
+        }
+
+        mostrarMensagem(data.message || "Produto removido com sucesso.", "success");
+        await renderizarProdutosCadastrados();
+    } catch (error) {
+        mostrarMensagem(error.message, "danger");
+    }
+}
+
+async function salvarProduto() {
+    if (!validarFormulario()) {
+        return;
     }
 
-    salvarProdutos(novaLista);
-    limparFormulario();
-    renderizarProdutosCadastrados();
+    const formData = new FormData(formAdicionarProduto);
+
+    try {
+        const response = await fetch(API_SALVAR_PRODUTO, {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Erro ao salvar produto.");
+        }
+
+        mostrarMensagem(data.message || "Produto salvo com sucesso.", "success");
+        limparFormulario();
+        await renderizarProdutosCadastrados();
+    } catch (error) {
+        mostrarMensagem(error.message, "danger");
+    }
 }
 
 if (imagemProduto) {
@@ -345,52 +267,17 @@ if (imagemProduto) {
         }
 
         const leitor = new FileReader();
-
         leitor.onload = function (evento) {
             preencherPreview(evento.target.result);
         };
-
         leitor.readAsDataURL(arquivo);
-    });
-}
-
-if (botaoCancelarEdicao) {
-    botaoCancelarEdicao.addEventListener("click", function () {
-        limparFormulario();
     });
 }
 
 if (formAdicionarProduto) {
     formAdicionarProduto.addEventListener("submit", function (event) {
         event.preventDefault();
-
-        const arquivo = imagemProduto && imagemProduto.files ? imagemProduto.files[0] : null;
-
-        if (arquivo) {
-            const leitor = new FileReader();
-
-            leitor.onload = function (evento) {
-                salvarProduto(evento.target.result);
-            };
-
-            leitor.readAsDataURL(arquivo);
-            return;
-        }
-
-        const idEditando = produtoEditandoId && produtoEditandoId.value
-            ? Number(produtoEditandoId.value)
-            : null;
-
-        if (idEditando) {
-            const produtos = lerProdutos();
-            const produtoAtual = produtos.find(function (produto) {
-                return produto.id === idEditando;
-            });
-
-            salvarProduto(produtoAtual ? produtoAtual.imagem : "");
-        } else {
-            salvarProduto("");
-        }
+        salvarProduto();
     });
 }
 

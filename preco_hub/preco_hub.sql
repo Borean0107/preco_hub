@@ -73,32 +73,6 @@ INSERT INTO `fabricante` (`id_fabricante`, `nome_fabricante`) VALUES
 
 -- --------------------------------------------------------
 
---
--- Estrutura para tabela `lista`
---
-
-CREATE TABLE `lista` (
-  `id_lista` int(11) NOT NULL,
-  `nome_lista` varchar(120) NOT NULL,
-  `data_criacao_lista` datetime NOT NULL DEFAULT current_timestamp(),
-  `fk_usuario_id_usuario` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `lista_produto`
---
-
-CREATE TABLE `lista_produto` (
-  `fk_lista_id_lista` int(11) NOT NULL,
-  `fk_produto_id_produto` int(11) NOT NULL,
-  `quantidade` int(11) NOT NULL DEFAULT 1,
-  `comprado` tinyint(1) NOT NULL DEFAULT 0,
-  `data_adicao` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
 
 --
 -- Estrutura para tabela `mercado`
@@ -202,20 +176,6 @@ ALTER TABLE `fabricante`
   ADD UNIQUE KEY `nome_fabricante` (`nome_fabricante`);
 
 --
--- Índices de tabela `lista`
---
-ALTER TABLE `lista`
-  ADD PRIMARY KEY (`id_lista`),
-  ADD KEY `fk_lista_usuario` (`fk_usuario_id_usuario`);
-
---
--- Índices de tabela `lista_produto`
---
-ALTER TABLE `lista_produto`
-  ADD PRIMARY KEY (`fk_lista_id_lista`,`fk_produto_id_produto`),
-  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`);
-
---
 -- Índices de tabela `mercado`
 --
 ALTER TABLE `mercado`
@@ -262,12 +222,6 @@ ALTER TABLE `fabricante`
   MODIFY `id_fabricante` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT de tabela `lista`
---
-ALTER TABLE `lista`
-  MODIFY `id_lista` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT de tabela `mercado`
 --
 ALTER TABLE `mercado`
@@ -288,19 +242,6 @@ ALTER TABLE `usuario`
 --
 -- Restrições para tabelas despejadas
 --
-
---
--- Restrições para tabelas `lista`
---
-ALTER TABLE `lista`
-  ADD CONSTRAINT `fk_lista_usuario` FOREIGN KEY (`fk_usuario_id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Restrições para tabelas `lista_produto`
---
-ALTER TABLE `lista_produto`
-  ADD CONSTRAINT `fk_lista_produto_lista` FOREIGN KEY (`fk_lista_id_lista`) REFERENCES `lista` (`id_lista`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_lista_produto_produto` FOREIGN KEY (`fk_produto_id_produto`) REFERENCES `produto` (`id_produto`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Restrições para tabelas `mercado_produto`

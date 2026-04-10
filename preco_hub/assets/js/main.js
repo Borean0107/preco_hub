@@ -1,5 +1,6 @@
 const STORAGE_PRODUTOS = "produtosCadastrados";
 const STORAGE_LISTA = "listaProdutos";
+const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
 
 function normalizarTexto(texto) {
     return String(texto)
@@ -23,6 +24,36 @@ function lerProdutosCadastrados() {
 function lerListaCompras() {
     const dados = localStorage.getItem(STORAGE_LISTA);
     return dados ? JSON.parse(dados) : [];
+}
+
+async function buscarProdutosDoBackend() {
+    try {
+        const response = await fetch(API_LISTAR_PRODUTOS, {
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Falha ao carregar produtos do servidor.");
+        }
+
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.data)) {
+            throw new Error("Resposta inválida do servidor.");
+        }
+
+        return data.data.map(function (produto) {
+            return {
+                nome: produto.nome_produto,
+                imagem: produto.imagem_produto,
+                precos: produto.precos || []
+            };
+        });
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 }
 
 function salvarListaCompras(lista) {
@@ -214,29 +245,45 @@ function obterNomesDosProdutosFixos() {
     return nomes;
 }
 
-function renderizarProdutosDoLocalStorage() {
+async function renderizarProdutosDoLocalStorage() {
     const container = document.getElementById("listaProdutos");
     if (!container) {
         return;
     }
 
-    const produtos = lerProdutosCadastrados();
+    const produtosBackend = await buscarProdutosDoBackend();
+    const produtosLocal = lerProdutosCadastrados();
     const nomesFixos = obterNomesDosProdutosFixos();
+    const nomesJaRenderizados = new Set(nomesFixos);
 
-    produtos.forEach(function (produto) {
+    const produtosParaRenderizar = [];
+
+    produtosBackend.forEach(function (produto) {
         const nomeNormalizado = normalizarTexto(produto.nome);
-
-        if (nomesFixos.indexOf(nomeNormalizado) !== -1) {
+        if (nomesJaRenderizados.has(nomeNormalizado)) {
             return;
         }
+        nomesJaRenderizados.add(nomeNormalizado);
+        produtosParaRenderizar.push(produto);
+    });
 
+    produtosLocal.forEach(function (produto) {
+        const nomeNormalizado = normalizarTexto(produto.nome);
+        if (nomesJaRenderizados.has(nomeNormalizado)) {
+            return;
+        }
+        nomesJaRenderizados.add(nomeNormalizado);
+        produtosParaRenderizar.push(produto);
+    });
+
+    produtosParaRenderizar.forEach(function (produto) {
         const card = criarCardProduto(produto);
         container.appendChild(card);
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-    renderizarProdutosDoLocalStorage();
+document.addEventListener("DOMContentLoaded", async function () {
+    await renderizarProdutosDoLocalStorage();
     ordenarPrecosDosCards();
     ativarBotoesAdicionar();
     ativarBusca();

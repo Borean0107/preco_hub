@@ -74,6 +74,7 @@
                                     <input
                                         type="text"
                                         id="nomeProduto"
+                                        name="nome"
                                         class="form-control"
                                         placeholder="Ex: Arroz Tio João 5kg"
                                         required>
@@ -86,6 +87,7 @@
                                     <input
                                         type="text"
                                         id="marcaProduto"
+                                        name="marca"
                                         class="form-control"
                                         placeholder="Ex: Tio João"
                                         required>
@@ -95,7 +97,7 @@
                                     <label for="categoriaProduto" class="form-label fw-semibold text-marrom">
                                         Categoria
                                     </label>
-                                    <select id="categoriaProduto" class="form-select" required>
+                                    <select id="categoriaProduto" name="categoria" class="form-select" required>
                                         <option value="">Selecione</option>
                                         <option value="Arroz">Arroz</option>
                                         <option value="Feijão">Feijão</option>
@@ -116,6 +118,7 @@
                                     <input
                                         type="file"
                                         id="imagemProduto"
+                                        name="imagemProduto"
                                         class="form-control"
                                         accept="image/*">
                                 </div>
@@ -139,14 +142,27 @@
 
                             <h2 class="h5 text-marrom fw-bold mb-3">Preços por mercado</h2>
 
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="precoSavegnago" class="form-label fw-semibold text-marrom">
-                                        Savegnago
+                            <div class="row g-3" id="mercadosComparados">
+                                <div class="col-md-6">
+                                    <label for="mercadoNome1" class="form-label fw-semibold text-marrom">
+                                        Nome do mercado 1
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="mercadoNome1"
+                                        name="mercadoNome[]"
+                                        class="form-control"
+                                        placeholder="Ex: Savegnago"
+                                        required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="mercadoPreco1" class="form-label fw-semibold text-marrom">
+                                        Preço do mercado 1
                                     </label>
                                     <input
                                         type="number"
-                                        id="precoSavegnago"
+                                        id="mercadoPreco1"
+                                        name="mercadoPreco[]"
                                         class="form-control"
                                         placeholder="Ex: 19.90"
                                         step="0.01"
@@ -154,13 +170,26 @@
                                         required>
                                 </div>
 
-                                <div class="col-md-4">
-                                    <label for="precoFavetta" class="form-label fw-semibold text-marrom">
-                                        Favetta
+                                <div class="col-md-6">
+                                    <label for="mercadoNome2" class="form-label fw-semibold text-marrom">
+                                        Nome do mercado 2
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="mercadoNome2"
+                                        name="mercadoNome[]"
+                                        class="form-control"
+                                        placeholder="Ex: Favetta"
+                                        required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="mercadoPreco2" class="form-label fw-semibold text-marrom">
+                                        Preço do mercado 2
                                     </label>
                                     <input
                                         type="number"
-                                        id="precoFavetta"
+                                        id="mercadoPreco2"
+                                        name="mercadoPreco[]"
                                         class="form-control"
                                         placeholder="Ex: 20.75"
                                         step="0.01"
@@ -168,13 +197,26 @@
                                         required>
                                 </div>
 
-                                <div class="col-md-4">
-                                    <label for="precoPagueMenos" class="form-label fw-semibold text-marrom">
-                                        Pague Menos
+                                <div class="col-md-6">
+                                    <label for="mercadoNome3" class="form-label fw-semibold text-marrom">
+                                        Nome do mercado 3
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="mercadoNome3"
+                                        name="mercadoNome[]"
+                                        class="form-control"
+                                        placeholder="Ex: Pague Menos"
+                                        required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="mercadoPreco3" class="form-label fw-semibold text-marrom">
+                                        Preço do mercado 3
                                     </label>
                                     <input
                                         type="number"
-                                        id="precoPagueMenos"
+                                        id="mercadoPreco3"
+                                        name="mercadoPreco[]"
                                         class="form-control"
                                         placeholder="Ex: 21.49"
                                         step="0.01"
