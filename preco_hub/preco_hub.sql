@@ -141,32 +141,6 @@ CREATE TABLE `mercado_produto` (
 -- Despejando dados para a tabela `mercado_produto`
 --
 
-INSERT INTO `mercado_produto` (`fk_mercado_id_mercado`, `fk_produto_id_produto`, `preco_produto_mercado`, `data_atualizacao_preco`, `disponibilidade_produto`) VALUES
-(1, 1, 19.90, '2026-03-16 20:21:45', 1),
-(1, 2, 5.29, '2026-03-16 20:21:45', 1),
-(1, 3, 7.89, '2026-03-16 20:21:46', 1),
-(1, 4, 17.50, '2026-03-16 20:21:46', 1),
-(1, 5, 4.89, '2026-03-16 20:21:46', 1),
-(1, 6, 6.79, '2026-03-16 20:21:46', 1),
-(1, 7, 4.49, '2026-03-16 20:21:46', 1),
-(1, 8, 9.99, '2026-03-16 20:21:47', 1),
-(2, 1, 20.75, '2026-03-16 20:21:45', 1),
-(2, 2, 13.75, '2026-03-16 20:21:45', 1),
-(2, 3, 8.50, '2026-03-16 20:21:46', 1),
-(2, 4, 16.90, '2026-03-16 20:21:46', 1),
-(2, 5, 5.10, '2026-03-16 20:21:46', 1),
-(2, 6, 6.99, '2026-03-16 20:21:46', 1),
-(2, 7, 6.99, '2026-03-16 20:21:46', 1),
-(2, 8, 10.36, '2026-03-16 20:21:47', 1),
-(3, 1, 21.49, '2026-03-16 20:21:45', 1),
-(3, 2, 8.49, '2026-03-16 20:21:45', 1),
-(3, 3, 8.20, '2026-03-16 20:21:46', 1),
-(3, 4, 18.20, '2026-03-16 20:21:46', 1),
-(3, 5, 4.69, '2026-03-16 20:21:46', 1),
-(3, 6, 7.20, '2026-03-16 20:21:46', 1),
-(3, 7, 5.90, '2026-03-16 20:21:47', 1),
-(3, 8, 10.50, '2026-03-16 20:21:47', 1);
-
 -- --------------------------------------------------------
 
 --
@@ -186,16 +160,6 @@ CREATE TABLE `produto` (
 --
 -- Despejando dados para a tabela `produto`
 --
-
-INSERT INTO `produto` (`id_produto`, `nome_produto`, `descricao_produto`, `imagem_produto`, `codigo_barras_produto`, `fk_categoria_id_categoria`, `fk_fabricante_id_fabricante`) VALUES
-(1, 'Arroz Tio João 5kg', 'Arroz tipo 1 pacote 5kg', 'assets/img/produtos/arroz.jpg', '7896006716114', 1, 1),
-(2, 'Macarrão Fetuccine Barilla 500g', 'Macarrão tipo fetuccine 500g', 'assets/img/produtos/macarrao.jpg', '7896102500150', 3, 2),
-(3, 'Feijão Carioca Kicaldo 1kg', 'Feijão carioca pacote 1kg', 'assets/img/produtos/feijao.jpg', '7896256601203', 2, 3),
-(4, 'Café Pilão 500g', 'Café torrado e moído 500g', 'assets/img/produtos/cafe.jpg', '7896089010000', 4, 4),
-(5, 'Leite Italac 1L', 'Leite UHT integral 1 litro', 'assets/img/produtos/leite.jpg', '7898080640012', 5, 5),
-(6, 'Óleo Liza 900ml', 'Óleo de soja 900ml', 'assets/img/produtos/oleo.jpg', '7896036090017', 6, 6),
-(7, 'Farinha Dona Benta 1kg', 'Farinha de trigo 1kg', 'assets/img/produtos/farinha.jpg', '7891200001111', 7, 7),
-(8, 'Suco de Laranja Del Valle 1,5L', 'Suco de laranja pronto 1,5L', 'assets/img/produtos/sucolaranja.jpg', '7894900015151', 8, 8);
 
 -- --------------------------------------------------------
 
