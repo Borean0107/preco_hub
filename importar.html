@@ -2,18 +2,63 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Importar Planilha</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preço-Hub | Importar Planilha</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
+
 <body>
 
-    <h2>Importar Planilha</h2>
+<!-- NAVBAR (MESMA DO SITE) -->
+<nav class="navbar navbar-expand-lg navbar-light navbar-profissional sticky-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-3" href="index.html">
+            <img src="assets/img/logo/logo.png" class="logo-navbar">
+            <div>
+                <span class="brand-title">Preço-Hub</span>
+                <small class="brand-subtitle">Comparador inteligente</small>
+            </div>
+        </a>
 
-    <input type="file" id="arquivoCSV">
-    <button onclick="importarCSV()">Importar</button>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="index.html">Início</a></li>
+                <li class="nav-item"><a class="nav-link" href="lista.html">Minha Lista</a></li>
+                <li class="nav-item"><a class="nav-link active" href="#">Importar</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
 
-    <p id="resultado"></p>
+<!-- CONTEÚDO -->
+<main class="container my-5">
 
-    <script src="assets/js/importar.js"></script>
+    <div class="card shadow p-4">
+        <h2 class="mb-3">Importar Planilha</h2>
+        <p class="text-muted">
+            Envie uma planilha (.csv ou .xlsx) contendo produtos e preços.
+        </p>
 
+        <form id="formImportar">
+            <div class="mb-3">
+                <label class="form-label">Arquivo</label>
+                <input type="file" class="form-control" id="arquivo" required>
+            </div>
+
+            <button class="btn btn-primary">Importar</button>
+        </form>
+
+        <div id="resultado" class="mt-4"></div>
+    </div>
+
+</main>
+
+<footer class="text-center py-4 bg-marrom text-light">
+    © 2026 Preço-Hub
+</footer>
+
+<script src="assets/js/importar.js"></script>
 </body>
 </html>
