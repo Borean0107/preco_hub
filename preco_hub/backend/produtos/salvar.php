@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/../config/constants.php";
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 
@@ -12,6 +13,11 @@ $categoria = trim($_POST["categoria"] ?? "");
 $mercadoNomes = $_POST["mercadoNome"] ?? [];
 $mercadoPrecos = $_POST["mercadoPreco"] ?? [];
 $imagemUpload = $_FILES["imagemProduto"] ?? null;
+
+// Validação de comprimento de strings
+if (strlen($nome) > MAX_NOME_PRODUTO || strlen($marca) > MAX_NOME_MARCA || strlen($categoria) > MAX_NOME_CATEGORIA) {
+    jsonResponse(false, "Alguns campos excedem o tamanho máximo permitido.", null, 400);
+}
 
 if (!$nome || !$marca || !$categoria || !is_array($mercadoNomes) || !is_array($mercadoPrecos) || count($mercadoNomes) === 0 || count($mercadoPrecos) === 0) {
     jsonResponse(false, "Preencha todos os campos obrigatórios.", null, 400);
@@ -38,17 +44,16 @@ if (!$imagemUpload || $imagemUpload["error"] !== UPLOAD_ERR_OK) {
     jsonResponse(false, "Selecione uma imagem válida para o produto.", null, 400);
 }
 
-$allowedMimeTypes = [
-    "image/jpeg" => "jpg",
-    "image/png" => "png",
-    "image/webp" => "webp"
-];
+// Validar tamanho do arquivo
+if ($imagemUpload["size"] > MAX_UPLOAD_SIZE) {
+    jsonResponse(false, "A imagem não deve ultrapassar 5MB.", null, 400);
+}
 
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
 $mimeType = finfo_file($finfo, $imagemUpload["tmp_name"]);
 finfo_close($finfo);
 
-if (!isset($allowedMimeTypes[$mimeType])) {
+if (!isset(ALLOWED_MIME_TYPES[$mimeType])) {
     jsonResponse(false, "Formato de imagem inválido. Use JPG, PNG ou WEBP.", null, 400);
 }
 
@@ -58,7 +63,7 @@ if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
 }
 
 $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', mb_strtolower(pathinfo($imagemUpload["name"], PATHINFO_FILENAME)));
-$extension = $allowedMimeTypes[$mimeType];
+$extension = ALLOWED_MIME_TYPES[$mimeType];
 $nomeArquivo = $safeName . '_' . time() . '.' . $extension;
 $caminhoArquivo = $uploadDir . $nomeArquivo;
 

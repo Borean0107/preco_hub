@@ -1,0 +1,30 @@
+# Arquivo de Segurança - Raiz do Projeto
+# Proteger arquivos de configuração e sensíveis
+
+# Negar acesso a arquivos específicos
+<FilesMatch "^(\.(env|env\..*|git|htaccess)$|\.env\.|composer\.lock)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Proteger arquivos de backup
+<FilesMatch "\.(sql|sql\.bak|bak|backup)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Configurar segurança geral
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Não indexar diretórios
+Options -Indexes
+
+# Ativar Gzip se disponível
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
+</IfModule>
