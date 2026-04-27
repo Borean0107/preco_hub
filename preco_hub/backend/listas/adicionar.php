@@ -5,14 +5,14 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 
 $usuarioId = $_SESSION["usuario_id"];
-$produtoId = (int) ($_POST["produto_id"] ?? 0);
+$produtoId = (int)
+($_POST["produto_id"] ??0);
 
-if ($produtoId <= 0) {
+if ($produtoId <= 0){
     jsonResponse(false, "Produto inválido.", null, 400);
 }
-
-$stmt = $pdo->prepare("SELECT l.id_lista FROM lista l WHERE l.fk_usuario_id_usuario = ? ORDER BY l.id_lista DESC LIMIT 1");
-$stmt->execute([$usuarioId]);
+$stmt = $pdo->prepare("SELECT l.id_lista FROM lista l WHERE l.fk_usuario_id_usuario=? ORDER BY l.id_lista DESC LIMIT 1");
+$stmt->execute([$usuarioID]);
 $lista = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$lista) {

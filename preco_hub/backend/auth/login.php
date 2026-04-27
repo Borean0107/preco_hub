@@ -4,7 +4,6 @@ session_start();
 
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
-require_once __DIR__ . "/../helpers/Validator.php";
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     jsonResponse(false, "Método não permitido.", null, 405);
@@ -13,15 +12,8 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 $email = trim($_POST["email"] ?? "");
 $senha = trim($_POST["senha"] ?? "");
 
-// Validar inputs
-Validator::reset();
-Validator::required($email, "Email");
-Validator::required($senha, "Senha");
-Validator::email($email);
-
-if (Validator::hasErrors()) {
-    $errors = Validator::getErrors();
-    jsonResponse(false, $errors[0], null, 400);
+if (!$email || !$senha) {
+    jsonResponse(false, "Preencha email e senha.", null, 400);
 }
 
 $stmt = $pdo->prepare("SELECT * FROM usuario WHERE email_usuario = ?");
