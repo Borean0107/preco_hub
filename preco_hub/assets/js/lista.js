@@ -13,6 +13,15 @@ function formatarPreco(valor) {
     });
 }
 
+function escaparHtml(valor) {
+    return String(valor)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function lerLista() {
     const dados = localStorage.getItem(STORAGE_LISTA);
     return dados ? JSON.parse(dados) : [];
@@ -147,7 +156,7 @@ function calcularEstrategia(lista) {
                 ${grupos.map(function (grupo) {
                     return `
                         <div class="estrategia-item">
-                            <strong>${grupo.mercado}</strong> — ${grupo.quantidade} item(ns) — ${formatarPreco(grupo.subtotal)}
+                            <strong>${escaparHtml(grupo.mercado)}</strong> - ${grupo.quantidade} item(ns) - ${formatarPreco(grupo.subtotal)}
                         </div>
                     `;
                 }).join("")}
@@ -229,7 +238,7 @@ function renderizarLista() {
             blocoMercado = `
                 <div class="mercado-bloco mt-4 mb-2">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h5 class="text-marrom fw-bold mb-0">${item.mercado}</h5>
+                        <h5 class="text-marrom fw-bold mb-0">${escaparHtml(item.mercado)}</h5>
                         <span class="badge-subtotal">
                             Subtotal: ${formatarPreco(subtotalMercado)}
                         </span>
@@ -258,7 +267,7 @@ function renderizarLista() {
                     >
 
                     <label class="form-check-label ${item.comprado ? "text-decoration-line-through text-muted" : ""}">
-                        ${item.nome}
+                        ${escaparHtml(item.nome)}
                     </label>
                 </div>
 

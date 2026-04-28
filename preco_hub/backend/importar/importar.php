@@ -1,115 +1,216 @@
 <?php
 
-header("Content-Type: application/json");
-
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 
-if (!isset($_FILES["arquivo"])) {
-    jsonResponse(false, "Nenhum arquivo enviado.");
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    jsonResponse(false, "Metodo nao permitido.", null, 405);
+}
+
+if (!isset($_FILES["arquivo"]) || $_FILES["arquivo"]["error"] !== UPLOAD_ERR_OK) {
+    jsonResponse(false, "Nenhum arquivo CSV foi enviado.", null, 400);
+}
+
+$nomeArquivo = $_FILES["arquivo"]["name"] ?? "";
+$extensao = strtolower(pathinfo($nomeArquivo, PATHINFO_EXTENSION));
+
+if ($extensao !== "csv") {
+    jsonResponse(false, "Envie um arquivo no formato CSV.", null, 400);
 }
 
 $arquivo = $_FILES["arquivo"]["tmp_name"];
+$handle = fopen($arquivo, "r");
 
-if (($handle = fopen($arquivo, "r")) === false) {
-    jsonResponse(false, "Erro ao abrir o arquivo.");
+if ($handle === false) {
+    jsonResponse(false, "Erro ao abrir o arquivo.", null, 400);
 }
 
-$header = fgetcsv($handle);
+function detectarDelimitador($linha)
+{
+    $opcoes = [
+        ";" => substr_count($linha, ";"),
+        "," => substr_count($linha, ","),
+        "\t" => substr_count($linha, "\t")
+    ];
 
-if (count($header) < 4) {
-    jsonResponse(false, "Formato inválido da planilha.");
+    arsort($opcoes);
+    return (string) array_key_first($opcoes);
 }
 
-$mercados = array_slice($header, 3);
+function normalizarPrecoImportado($valor)
+{
+    $valor = trim((string) $valor);
+
+    if ($valor === "") {
+        return null;
+    }
+
+    $valor = preg_replace('/[^\d,.-]/', '', $valor);
+
+    if ($valor === "") {
+        return null;
+    }
+
+    if (strpos($valor, ",") !== false && strpos($valor, ".") !== false) {
+        $valor = str_replace(".", "", $valor);
+        $valor = str_replace(",", ".", $valor);
+    } elseif (strpos($valor, ",") !== false) {
+        $valor = str_replace(",", ".", $valor);
+    }
+
+    $preco = filter_var($valor, FILTER_VALIDATE_FLOAT);
+
+    if ($preco === false || $preco <= 0) {
+        return null;
+    }
+
+    return $preco;
+}
+
+function obterIdPorNome($pdo, $tabela, $colunaId, $colunaNome, $nome)
+{
+    $stmt = $pdo->prepare("SELECT {$colunaId} FROM {$tabela} WHERE LOWER({$colunaNome}) = LOWER(?)");
+    $stmt->execute([$nome]);
+    $id = $stmt->fetchColumn();
+
+    if ($id) {
+        return (int) $id;
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO {$tabela} ({$colunaNome}) VALUES (?)");
+    $stmt->execute([$nome]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+$primeiraLinha = fgets($handle);
+
+if ($primeiraLinha === false) {
+    fclose($handle);
+    jsonResponse(false, "O arquivo CSV esta vazio.", null, 400);
+}
+
+$delimitador = detectarDelimitador($primeiraLinha);
+rewind($handle);
+
+$header = fgetcsv($handle, 0, $delimitador);
+
+if (!$header || count($header) < 4) {
+    fclose($handle);
+    jsonResponse(false, "Formato invalido. Use: produto, marca, categoria e mercados.", null, 400);
+}
+
+$header = array_map("trim", $header);
 
 $inseridos = 0;
 $atualizados = 0;
 $erros = 0;
 
-while (($data = fgetcsv($handle)) !== false) {
+try {
+    $pdo->beginTransaction();
 
-    try {
-        $nome = trim($data[0]);
-        $marca = trim($data[1]);
-        $categoria = trim($data[2]);
+    $stmtProduto = $pdo->prepare("SELECT id_produto FROM produto WHERE LOWER(nome_produto) = LOWER(?) LIMIT 1");
+    $stmtInserirProduto = $pdo->prepare("
+        INSERT INTO produto (
+            nome_produto,
+            descricao_produto,
+            imagem_produto,
+            codigo_barras_produto,
+            fk_categoria_id_categoria,
+            fk_fabricante_id_fabricante
+        ) VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    $stmtAtualizarProduto = $pdo->prepare("
+        UPDATE produto
+        SET fk_categoria_id_categoria = ?,
+            fk_fabricante_id_fabricante = ?
+        WHERE id_produto = ?
+    ");
+    $stmtPreco = $pdo->prepare("
+        INSERT INTO mercado_produto (
+            fk_mercado_id_mercado,
+            fk_produto_id_produto,
+            preco_produto_mercado,
+            data_atualizacao_preco
+        ) VALUES (?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+            preco_produto_mercado = VALUES(preco_produto_mercado),
+            data_atualizacao_preco = NOW()
+    ");
 
-        if (!$nome || !$marca) {
+    while (($linha = fgetcsv($handle, 0, $delimitador)) !== false) {
+        $nome = trim((string) ($linha[0] ?? ""));
+        $marca = trim((string) ($linha[1] ?? ""));
+        $categoria = trim((string) ($linha[2] ?? ""));
+
+        if (!$nome || !$marca || !$categoria) {
             $erros++;
             continue;
         }
 
-        // 🔍 Verifica se produto existe
-        $stmtCheck = $conn->prepare("
-            SELECT id_produto FROM produto 
-            WHERE nome_produto = ? AND marca = ?
-            LIMIT 1
-        ");
-        $stmtCheck->bind_param("ss", $nome, $marca);
-        $stmtCheck->execute();
-        $result = $stmtCheck->get_result();
-        $produto = $result->fetch_assoc();
+        $precosValidos = [];
 
-        if ($produto) {
-            $produtoId = $produto["id_produto"];
+        for ($i = 3; $i < count($header); $i++) {
+            $mercado = trim((string) ($header[$i] ?? ""));
+            $preco = normalizarPrecoImportado($linha[$i] ?? "");
+
+            if (!$mercado || $preco === null) {
+                continue;
+            }
+
+            $precosValidos[] = [
+                "mercado" => $mercado,
+                "preco" => $preco
+            ];
+        }
+
+        if (count($precosValidos) === 0) {
+            $erros++;
+            continue;
+        }
+
+        $idCategoria = obterIdPorNome($pdo, "categoria", "id_categoria", "nome_categoria", $categoria);
+        $idFabricante = obterIdPorNome($pdo, "fabricante", "id_fabricante", "nome_fabricante", $marca);
+
+        $stmtProduto->execute([$nome]);
+        $produtoId = $stmtProduto->fetchColumn();
+
+        if ($produtoId) {
+            $produtoId = (int) $produtoId;
+            $stmtAtualizarProduto->execute([$idCategoria, $idFabricante, $produtoId]);
             $atualizados++;
         } else {
-            // ➕ Inserir produto novo
-            $stmtInsert = $conn->prepare("
-                INSERT INTO produto (nome_produto, marca, categoria, imagem_produto)
-                VALUES (?, ?, ?, '')
-            ");
-            $stmtInsert->bind_param("sss", $nome, $marca, $categoria);
-            $stmtInsert->execute();
-
-            $produtoId = $conn->insert_id;
+            $stmtInserirProduto->execute([
+                $nome,
+                "Produto importado por planilha.",
+                "assets/img/logo/logo.png",
+                null,
+                $idCategoria,
+                $idFabricante
+            ]);
+            $produtoId = (int) $pdo->lastInsertId();
             $inseridos++;
         }
 
-        // 💰 Inserir/Atualizar preços
-        for ($i = 0; $i < count($mercados); $i++) {
-
-            $mercado = $mercados[$i];
-            $preco = floatval($data[$i + 3]);
-
-            if ($preco <= 0) continue;
-
-            // Verifica se já existe preço
-            $stmtPreco = $conn->prepare("
-                SELECT id_preco FROM preco
-                WHERE fk_produto_id_produto = ? AND mercado = ?
-            ");
-            $stmtPreco->bind_param("is", $produtoId, $mercado);
-            $stmtPreco->execute();
-            $resPreco = $stmtPreco->get_result();
-
-            if ($resPreco->fetch_assoc()) {
-                // 🔄 Atualiza
-                $stmtUpdate = $conn->prepare("
-                    UPDATE preco SET preco = ?
-                    WHERE fk_produto_id_produto = ? AND mercado = ?
-                ");
-                $stmtUpdate->bind_param("dis", $preco, $produtoId, $mercado);
-                $stmtUpdate->execute();
-            } else {
-                // ➕ Insere
-                $stmtInsertPreco = $conn->prepare("
-                    INSERT INTO preco (fk_produto_id_produto, mercado, preco)
-                    VALUES (?, ?, ?)
-                ");
-                $stmtInsertPreco->bind_param("isd", $produtoId, $mercado, $preco);
-                $stmtInsertPreco->execute();
-            }
+        foreach ($precosValidos as $precoItem) {
+            $idMercado = obterIdPorNome($pdo, "mercado", "id_mercado", "nome_mercado", $precoItem["mercado"]);
+            $stmtPreco->execute([$idMercado, $produtoId, $precoItem["preco"]]);
         }
-
-    } catch (Exception $e) {
-        $erros++;
     }
+
+    $pdo->commit();
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    fclose($handle);
+    jsonResponse(false, "Erro ao importar: " . $e->getMessage(), null, 500);
 }
 
 fclose($handle);
 
-jsonResponse(true, "Importação concluída.", [
+jsonResponse(true, "Importacao concluida.", [
     "produtos_inseridos" => $inseridos,
     "produtos_atualizados" => $atualizados,
     "linhas_com_erro" => $erros

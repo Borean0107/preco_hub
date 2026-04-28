@@ -157,6 +157,33 @@ INSERT INTO `usuario` (`id_usuario`, `nome_usuario`, `email_usuario`, `senha_usu
 (1, 'julio', 'matheusteves53@gmail.com', '$2y$10$6xCJ9lej8jx3WOKhm4rp0OozG2y/chRAtvse0Z0dS/rc1YnV/gy5y', '2026-03-23 20:37:54'),
 (2, 'matheus', 'matheusborean@gmail.com', '$2y$10$67FXKeFnNi2hce3MI3mYgOBArdgM3vjfkk2RZa6/BOymPzODvJRI2', '2026-03-23 21:42:08');
 
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `lista`
+--
+
+CREATE TABLE `lista` (
+  `id_lista` int(11) NOT NULL,
+  `nome_lista` varchar(120) NOT NULL,
+  `data_criacao_lista` datetime NOT NULL DEFAULT current_timestamp(),
+  `fk_usuario_id_usuario` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura para tabela `lista_produto`
+--
+
+CREATE TABLE `lista_produto` (
+  `fk_lista_id_lista` int(11) NOT NULL,
+  `fk_produto_id_produto` int(11) NOT NULL,
+  `quantidade` int(11) NOT NULL DEFAULT 1,
+  `comprado` tinyint(1) NOT NULL DEFAULT 0,
+  `data_adicao` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Índices para tabelas despejadas
 --
@@ -206,6 +233,20 @@ ALTER TABLE `usuario`
   ADD UNIQUE KEY `email_usuario` (`email_usuario`);
 
 --
+-- Indices de tabela `lista`
+--
+ALTER TABLE `lista`
+  ADD PRIMARY KEY (`id_lista`),
+  ADD KEY `fk_lista_usuario` (`fk_usuario_id_usuario`);
+
+--
+-- Indices de tabela `lista_produto`
+--
+ALTER TABLE `lista_produto`
+  ADD PRIMARY KEY (`fk_lista_id_lista`,`fk_produto_id_produto`),
+  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`);
+
+--
 -- AUTO_INCREMENT para tabelas despejadas
 --
 
@@ -240,6 +281,12 @@ ALTER TABLE `usuario`
   MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT de tabela `lista`
+--
+ALTER TABLE `lista`
+  MODIFY `id_lista` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Restrições para tabelas despejadas
 --
 
@@ -256,6 +303,19 @@ ALTER TABLE `mercado_produto`
 ALTER TABLE `produto`
   ADD CONSTRAINT `fk_produto_categoria` FOREIGN KEY (`fk_categoria_id_categoria`) REFERENCES `categoria` (`id_categoria`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_produto_fabricante` FOREIGN KEY (`fk_fabricante_id_fabricante`) REFERENCES `fabricante` (`id_fabricante`) ON UPDATE CASCADE;
+
+--
+-- Restricoes para tabelas `lista`
+--
+ALTER TABLE `lista`
+  ADD CONSTRAINT `fk_lista_usuario` FOREIGN KEY (`fk_usuario_id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Restricoes para tabelas `lista_produto`
+--
+ALTER TABLE `lista_produto`
+  ADD CONSTRAINT `fk_lista_produto_lista` FOREIGN KEY (`fk_lista_id_lista`) REFERENCES `lista` (`id_lista`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_lista_produto_produto` FOREIGN KEY (`fk_produto_id_produto`) REFERENCES `produto` (`id_produto`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

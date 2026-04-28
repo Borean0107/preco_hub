@@ -22,6 +22,26 @@ function formatarPreco(valor) {
     });
 }
 
+function escaparHtml(valor) {
+    return String(valor)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function lerJsonSeguro(response) {
+    const texto = await response.text();
+    const inicioJson = texto.indexOf("{");
+
+    if (inicioJson === -1) {
+        throw new Error("Resposta invalida do servidor.");
+    }
+
+    return JSON.parse(texto.slice(inicioJson));
+}
+
 function resetarPreview() {
     if (previewImagem) {
         previewImagem.src = "";
@@ -135,7 +155,7 @@ async function buscarProdutos() {
             throw new Error("Não foi possível carregar os produtos.");
         }
 
-        const data = await response.json();
+        const data = await lerJsonSeguro(response);
         return data.success ? data.data : [];
     } catch (error) {
         console.error(error);
@@ -159,27 +179,34 @@ async function renderizarProdutosCadastrados() {
         const precosOrdenados = produto.precos ? produto.precos.slice().sort(function (a, b) {
             return Number(a.preco) - Number(b.preco);
         }) : [];
+        const nomeSeguro = escaparHtml(produto.nome_produto || "Produto sem nome");
+        const fabricanteSeguro = escaparHtml(produto.nome_fabricante || "-");
+        const categoriaSeguro = escaparHtml(produto.nome_categoria || "-");
+        const imagemSegura = escaparHtml(produto.imagem_produto || "assets/img/logo/logo.png");
 
         return `
             <div class="produto-adicionado-item">
                 <div class="produto-adicionado-topo">
                     <div class="produto-adicionado-info">
-                        <h3>${produto.nome_produto}</h3>
-                        <p class="mb-1"><strong>Marca:</strong> ${produto.nome_fabricante || "-"}</p>
-                        <p class="mb-0"><strong>Categoria:</strong> ${produto.nome_categoria || "-"}</p>
+                        <h3>${nomeSeguro}</h3>
+                        <p class="mb-1"><strong>Marca:</strong> ${fabricanteSeguro}</p>
+                        <p class="mb-0"><strong>Categoria:</strong> ${categoriaSeguro}</p>
                     </div>
-                    <img src="${produto.imagem_produto}" alt="${produto.nome_produto}">
+                    <img src="${imagemSegura}" alt="${nomeSeguro}">
                 </div>
 
                 <ul class="list-group mt-3">
-                    ${precosOrdenados.map(function (item, index) {
+                    ${precosOrdenados.length ? precosOrdenados.map(function (item, index) {
+                        const mercadoSeguro = escaparHtml(item.mercado || "Mercado");
                         return `
                             <li class="list-group-item d-flex justify-content-between ${index === 0 ? "lowest-price" : ""}">
-                                <span>${item.mercado}</span>
+                                <span>${mercadoSeguro}</span>
                                 <span>${formatarPreco(item.preco)}</span>
                             </li>
                         `;
-                    }).join("")}
+                    }).join("") : `
+                        <li class="list-group-item text-muted">Sem precos cadastrados.</li>
+                    `}
                 </ul>
 
                 <div class="d-flex gap-2 flex-wrap mt-3">
@@ -217,7 +244,7 @@ async function removerProduto(idProduto) {
             body: new URLSearchParams({ id_produto: idProduto })
         });
 
-        const data = await response.json();
+        const data = await lerJsonSeguro(response);
 
         if (!response.ok || !data.success) {
             throw new Error(data.message || "Erro ao remover produto.");
@@ -243,7 +270,7 @@ async function salvarProduto() {
             body: formData
         });
 
-        const data = await response.json();
+        const data = await lerJsonSeguro(response);
 
         if (!response.ok || !data.success) {
             throw new Error(data.message || "Erro ao salvar produto.");

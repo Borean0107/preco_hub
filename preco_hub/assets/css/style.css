@@ -111,6 +111,132 @@ main {
     color: #fff;
 }
 
+.perfil-nav {
+    position: relative;
+}
+
+.perfil-botao {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 7px 12px 7px 8px;
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    background-color: var(--branco);
+    color: var(--texto);
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.perfil-botao:hover,
+.perfil-botao:focus {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+    outline: none;
+}
+
+.perfil-botao[aria-expanded="true"] {
+    border-color: var(--azul);
+}
+
+.perfil-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(37, 99, 235, 0.10);
+    color: var(--azul);
+    font-size: 0.85rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.perfil-nome-curto {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perfil-caixa {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 1050;
+    width: 310px;
+    padding: 18px;
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    background-color: var(--branco);
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.16);
+}
+
+.perfil-caixa::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    right: 28px;
+    width: 14px;
+    height: 14px;
+    background-color: var(--branco);
+    border-left: 1px solid var(--borda);
+    border-top: 1px solid var(--borda);
+    transform: rotate(45deg);
+}
+
+.perfil-caixa-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--borda);
+}
+
+.perfil-caixa-topo strong,
+.perfil-caixa-topo small {
+    display: block;
+}
+
+.perfil-caixa-topo strong {
+    color: var(--texto);
+    line-height: 1.2;
+}
+
+.perfil-caixa-topo small,
+.perfil-info span {
+    color: #64748B;
+}
+
+.perfil-avatar-grande {
+    width: 46px;
+    height: 46px;
+    font-size: 1rem;
+}
+
+.perfil-info {
+    margin-top: 12px;
+}
+
+.perfil-info span {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.perfil-info strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--texto);
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+
 /* ================= HERO ================= */
 
 .hero-profissional {
@@ -523,6 +649,26 @@ footer {
         display: inline-flex;
         justify-content: center;
         width: 100%;
+    }
+
+    .perfil-nav {
+        width: 100%;
+    }
+
+    .perfil-botao {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .perfil-caixa {
+        position: static;
+        width: 100%;
+        margin-top: 10px;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
+    }
+
+    .perfil-caixa::before {
+        display: none;
     }
 
     .brand-subtitle {

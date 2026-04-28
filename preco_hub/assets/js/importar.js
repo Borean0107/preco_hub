@@ -1,16 +1,24 @@
-async function importarCSV() {
-    const fileInput = document.getElementById("arquivoCSV");
+async function importarCSV(event) {
+    event.preventDefault();
+
+    const fileInput = document.getElementById("arquivo");
     const resultado = document.getElementById("resultado");
 
+    if (!fileInput || !resultado) {
+        return;
+    }
+
     if (!fileInput.files.length) {
-        resultado.innerText = "Selecione um arquivo.";
+        resultado.className = "alert alert-warning";
+        resultado.textContent = "Selecione um arquivo CSV.";
         return;
     }
 
     const formData = new FormData();
     formData.append("arquivo", fileInput.files[0]);
 
-    resultado.innerText = "Processando planilha...";
+    resultado.className = "alert alert-info";
+    resultado.textContent = "Processando planilha...";
 
     try {
         const response = await fetch("backend/importar/importar.php", {
@@ -18,22 +26,41 @@ async function importarCSV() {
             body: formData
         });
 
-        const data = await response.json();
+        const data = await lerJsonSeguro(response);
 
-        if (!data.success) {
-            resultado.innerText = data.message;
-            return;
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Erro ao importar.");
         }
 
+        resultado.className = "alert alert-success";
         resultado.innerHTML = `
-            ✅ Importação concluída<br><br>
-            🆕 Inseridos: ${data.data.produtos_inseridos}<br>
-            🔄 Atualizados: ${data.data.produtos_atualizados}<br>
-            ⚠️ Erros: ${data.data.linhas_com_erro}
+            <strong>Importacao concluida.</strong><br>
+            Inseridos: ${data.data.produtos_inseridos}<br>
+            Atualizados: ${data.data.produtos_atualizados}<br>
+            Linhas com erro: ${data.data.linhas_com_erro}
         `;
-
     } catch (error) {
         console.error(error);
-        resultado.innerText = "Erro ao importar.";
+        resultado.className = "alert alert-danger";
+        resultado.textContent = error.message || "Erro ao importar.";
     }
 }
+
+async function lerJsonSeguro(response) {
+    const texto = await response.text();
+    const inicioJson = texto.indexOf("{");
+
+    if (inicioJson === -1) {
+        throw new Error("Resposta invalida do servidor.");
+    }
+
+    return JSON.parse(texto.slice(inicioJson));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const formImportar = document.getElementById("formImportar");
+
+    if (formImportar) {
+        formImportar.addEventListener("submit", importarCSV);
+    }
+});

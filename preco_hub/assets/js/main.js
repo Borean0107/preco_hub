@@ -2,6 +2,15 @@ const STORAGE_PRODUTOS = "produtosCadastrados";
 const STORAGE_LISTA = "listaProdutos";
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
 
+function escaparHtml(valor) {
+    return String(valor)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function normalizarTexto(texto) {
     return String(texto)
         .toLowerCase()
@@ -194,37 +203,46 @@ function ativarBusca() {
 function criarCardProduto(produto) {
     const coluna = document.createElement("div");
     coluna.className = "col-md-6 col-lg-4 produto-item";
-    coluna.dataset.nome = normalizarTexto(produto.nome);
+    coluna.dataset.nome = normalizarTexto(produto.nome || "");
 
-    const precosOrdenados = produto.precos.slice().sort(function (a, b) {
+    const precosOrdenados = (produto.precos || []).slice().sort(function (a, b) {
         return Number(a.preco) - Number(b.preco);
     });
 
     const melhorPreco = precosOrdenados[0];
+    const temPrecos = Boolean(melhorPreco);
+    const nomeSeguro = escaparHtml(produto.nome || "Produto sem nome");
+    const imagemSeguro = escaparHtml(produto.imagem || "assets/img/logo/logo.png");
 
     coluna.innerHTML = `
         <div class="card product-card h-100">
-            <img src="${produto.imagem}" class="card-img-top" alt="${produto.nome}">
+            <img src="${imagemSeguro}" class="card-img-top" alt="${nomeSeguro}">
             <div class="card-body">
-                <h5 class="card-title">${produto.nome}</h5>
+                <h5 class="card-title">${nomeSeguro}</h5>
 
                 <ul class="list-group list-group-flush mt-3 price-list">
-                    ${precosOrdenados.map(function (item, index) {
+                    ${temPrecos ? precosOrdenados.map(function (item, index) {
+                        const mercadoSeguro = escaparHtml(item.mercado || "Mercado");
                         return `
                             <li class="list-group-item d-flex justify-content-between price-item ${index === 0 ? "lowest-price" : ""}" data-preco="${item.preco}">
-                                <span>${item.mercado}</span>
+                                <span>${mercadoSeguro}</span>
                                 <span>${formatarPreco(item.preco)}</span>
                             </li>
                         `;
-                    }).join("")}
+                    }).join("") : `
+                        <li class="list-group-item text-muted">
+                            Sem precos cadastrados.
+                        </li>
+                    `}
                 </ul>
 
                 <button
                     class="btn btn-laranja w-100 mt-3 adicionar-lista"
-                    data-nome="${produto.nome}"
-                    data-preco="${melhorPreco.preco}"
-                    data-mercado="${melhorPreco.mercado}">
-                    Adicionar à lista
+                    data-nome="${nomeSeguro}"
+                    data-preco="${temPrecos ? melhorPreco.preco : 0}"
+                    data-mercado="${temPrecos ? escaparHtml(melhorPreco.mercado || "") : ""}"
+                    ${temPrecos ? "" : "disabled"}>
+                    ${temPrecos ? "Adicionar à lista" : "Indisponivel"}
                 </button>
             </div>
         </div>

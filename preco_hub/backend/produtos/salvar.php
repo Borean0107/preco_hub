@@ -77,6 +77,9 @@ try {
 
     if ($produtoExistenteId) {
         $pdo->rollBack();
+        if (file_exists($caminhoArquivo)) {
+            unlink($caminhoArquivo);
+        }
         jsonResponse(false, "Produto já cadastrado.", null, 409);
     }
 
