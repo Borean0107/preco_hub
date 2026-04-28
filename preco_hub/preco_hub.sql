@@ -115,6 +115,32 @@ CREATE TABLE `mercado_produto` (
 -- Despejando dados para a tabela `mercado_produto`
 --
 
+INSERT INTO `mercado_produto` (`fk_mercado_id_mercado`, `fk_produto_id_produto`, `preco_produto_mercado`, `data_atualizacao_preco`, `disponibilidade_produto`) VALUES
+(1, 1, 29.90, NOW(), 1),
+(2, 1, 31.50, NOW(), 1),
+(3, 1, 30.20, NOW(), 1),
+(1, 2, 8.50, NOW(), 1),
+(2, 2, 8.90, NOW(), 1),
+(3, 2, 8.30, NOW(), 1),
+(1, 3, 12.90, NOW(), 1),
+(2, 3, 13.50, NOW(), 1),
+(3, 3, 12.50, NOW(), 1),
+(1, 4, 15.90, NOW(), 1),
+(2, 4, 16.50, NOW(), 1),
+(3, 4, 15.20, NOW(), 1),
+(1, 5, 5.50, NOW(), 1),
+(2, 5, 5.80, NOW(), 1),
+(3, 5, 5.40, NOW(), 1),
+(1, 6, 11.90, NOW(), 1),
+(2, 6, 12.50, NOW(), 1),
+(3, 6, 11.70, NOW(), 1),
+(1, 7, 9.90, NOW(), 1),
+(2, 7, 10.30, NOW(), 1),
+(3, 7, 9.50, NOW(), 1),
+(1, 8, 7.90, NOW(), 1),
+(2, 8, 8.50, NOW(), 1),
+(3, 8, 7.80, NOW(), 1);
+
 -- --------------------------------------------------------
 
 --
@@ -134,6 +160,16 @@ CREATE TABLE `produto` (
 --
 -- Despejando dados para a tabela `produto`
 --
+
+INSERT INTO `produto` (`id_produto`, `nome_produto`, `descricao_produto`, `imagem_produto`, `codigo_barras_produto`, `fk_categoria_id_categoria`, `fk_fabricante_id_fabricante`) VALUES
+(1, 'Arroz Tio João Integral 5kg', 'Arroz integral de alta qualidade', 'assets/img/produtos/arroz_tio_joao.jpg', '7898028001109', 1, 1),
+(2, 'Feijão Carioca Kicaldo 1kg', 'Feijão carioca selecionado', 'assets/img/produtos/feijao_kicaldo.jpg', '7896142700016', 2, 3),
+(3, 'Macarrão Integral Barilla 500g', 'Macarrão integral saudável', 'assets/img/produtos/macarrao_barilla.jpg', '8076800195047', 3, 2),
+(4, 'Café Pilão Tradicional 500g', 'Café coado tradicional Pilão', 'assets/img/produtos/cafe_pilao.jpg', '7898943700051', 4, 4),
+(5, 'Leite Integral Italac 1L', 'Leite integral fresco', 'assets/img/produtos/leite_italac.jpg', '7896065900023', 5, 5),
+(6, 'Óleo de Soja Liza 900ml', 'Óleo de soja refinado', 'assets/img/produtos/oleo_liza.jpg', '7891515060010', 6, 6),
+(7, 'Farinha de Trigo Dona Benta 1kg', 'Farinha de trigo especial', 'assets/img/produtos/farinha_dona_benta.jpg', '7896402500012', 7, 7),
+(8, 'Suco Del Valle Uva 1L', 'Suco integral de uva', 'assets/img/produtos/suco_del_valle.jpg', '7898927201156', 8, 8);
 
 -- --------------------------------------------------------
 

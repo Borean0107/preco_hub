@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Funcionalidades | Preço-Hub</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light navbar-profissional sticky-top">
+        <div class="container">
+
+            <a class="navbar-brand d-flex align-items-center gap-3" href="index.html">
+                <img src="assets/img/logo/logo.png" alt="Preço-Hub" class="logo-navbar">
+                <div class="brand-text">
+                    <span class="brand-title">Preço-Hub</span>
+                    <small class="brand-subtitle">Comparador inteligente de preços</small>
+                </div>
+            </a>
+
+        </div>
+    </nav>
+
+    <main class="container my-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="fw-bold mb-4">📚 Guia de Funcionalidades - Preço-Hub</h1>
+
+                <div class="alert alert-info mb-4">
+                    <h5>✅ Novas funcionalidades implementadas!</h5>
+                    <p>Descubra como usar cada recurso do sistema de comparação de preços.</p>
+                </div>
+
+                <!-- Buscador -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">🔍 1. Buscador de Produtos</h5>
+                        <p><strong>O que é:</strong> Sistema de busca avançado para encontrar produtos rapidamente.</p>
+                        <h6>Como usar:</h6>
+                        <ul>
+                            <li>Acesse <a href="busca.html" target="_blank"><strong>Buscar</strong></a> na navbar</li>
+                            <li>Digite o nome do produto (mín. 2 caracteres)</li>
+                            <li>Refine com filtros: <strong>Categoria</strong>, <strong>Mercado</strong>, <strong>Faixa de Preço</strong></li>
+                            <li>Clique no botão <strong>🔍 Buscar</strong></li>
+                            <li>Compare preços e adicione à lista</li>
+                        </ul>
+                        <p class="mb-0"><strong>💡 Dica:</strong> Os produtos com melhor preço aparecem destacados em verde!</p>
+                    </div>
+                </div>
+
+                <!-- Comparador Visual -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">📊 2. Comparador Visual</h5>
+                        <p><strong>O que é:</strong> Exibe todos os produtos com comparação visual lado a lado e gráficos.</p>
+                        <h6>Como usar:</h6>
+                        <ul>
+                            <li>Acesse <a href="comparador.html" target="_blank"><strong>Comparador</strong></a> na navbar</li>
+                            <li>Veja o resumo de economia no topo (total, máxima, média)</li>
+                            <li>Analise os gráficos interativos</li>
+                            <li>Consulte a tabela comparativa com todos os preços</li>
+                        </ul>
+                        <p class="mb-0"><strong>💡 Dica:</strong> Os gráficos mostram em verde o melhor preço em cada mercado!</p>
+                    </div>
+                </div>
+
+                <!-- Cálculo de Economia -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">💰 3. Cálculo Automático de Economia</h5>
+                        <p><strong>O que é:</strong> Sistema que calcula automaticamente quanto você economiza escolhendo o melhor preço.</p>
+                        <h6>Como funciona:</h6>
+                        <ul>
+                            <li><strong>Economia por produto:</strong> Diferença entre o preço máximo e mínimo</li>
+                            <li><strong>Economia máxima:</strong> Soma de todas as economias possíveis</li>
+                            <li><strong>Economia média:</strong> Economia média por produto</li>
+                            <li>Badges mostram economia de cada item na busca</li>
+                        </ul>
+                        <p class="mb-0"><strong>💡 Exemplo:</strong> Arroz custa R$ 29,90 (Savegnago), R$ 31,50 (Favetta), R$ 30,20 (Pague Menos) = Economia de até R$ 1,60</p>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">🎛️ 4. Filtros Avançados</h5>
+                        <p><strong>O que é:</strong> Refine resultados de busca com múltiplos critérios.</p>
+                        <h6>Filtros disponíveis:</h6>
+                        <ul>
+                            <li><strong>Categoria:</strong> Arroz, Feijão, Macarrão, Café, Leite, Óleo, Farinha, Suco</li>
+                            <li><strong>Mercado:</strong> Savegnago, Favetta, Pague Menos</li>
+                            <li><strong>Faixa de Preço:</strong> Digite mínimo e máximo desejado</li>
+                        </ul>
+                        <p class="mb-0"><strong>💡 Exemplo:</strong> Busque "Arroz" + Categoria "Arroz" + Preço max "R$ 30" = resultados filtrados!</p>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">📈 5. Gráficos e Análises</h5>
+                        <p><strong>O que é:</strong> Visualizações visuais dos dados de preços e economia.</p>
+                        <h6>Gráficos disponíveis (em Comparador):</h6>
+                        <ul>
+                            <li><strong>Gráfico de Linhas:</strong> Comparação de preços entre mercados por produto</li>
+                            <li><strong>Gráfico de Barras:</strong> Economia por produto (qual produto mais economiza)</li>
+                            <li><strong>Gráfico de Pizza:</strong> Distribuição média de preços entre mercados</li>
+                        </ul>
+                        <p class="mb-0"><strong>💡 Interatividade:</strong> Passe o mouse nos gráficos para ver valores exatos!</p>
+                    </div>
+                </div>
+
+                <!-- Dados Reais -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3">🗄️ 6. Base de Dados Populada</h5>
+                        <p><strong>O que é:</strong> Banco de dados com produtos reais e preços variados entre mercados.</p>
+                        <h6>Dados incluídos:</h6>
+                        <ul>
+                            <li><strong>8 produtos</strong> em diferentes categorias</li>
+                            <li><strong>3 mercados:</strong> Savegnago, Favetta, Pague Menos</li>
+                            <li><strong>Preços reais</strong> com variações entre lojas</li>
+                            <li>Todos com <strong>disponibilidade</strong> marcada</li>
+                        </ul>
+                        <p class="mb-0"><strong>📦 Produtos:</strong> Arroz, Feijão, Macarrão, Café, Leite, Óleo, Farinha, Suco</p>
+                    </div>
+                </div>
+
+                <!-- Fluxo Completo -->
+                <div class="card shadow-sm mb-4 border-success">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3 text-success">🚀 Fluxo Completo de Uso</h5>
+                        <ol>
+                            <li><strong>Busque um produto:</strong> Acesse <strong>Buscar</strong> e digite "Arroz"</li>
+                            <li><strong>Veja as opções:</strong> Sistema mostra preços em 3 mercados diferentes</li>
+                            <li><strong>Compare economia:</strong> Badge verde mostra "Economize até R$ X,XX"</li>
+                            <li><strong>Adicione à lista:</strong> Clique "+ Adicionar à lista" no melhor preço</li>
+                            <li><strong>Veja comparação geral:</strong> Acesse <strong>Comparador</strong> para análise visual</li>
+                            <li><strong>Analise gráficos:</strong> Entenda tendências de preços entre mercados</li>
+                            <li><strong>Organize compras:</strong> Acesse <strong>Minha Lista</strong> para finalizar</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Resumo de Tecnologias -->
+                <div class="card shadow-sm mb-4 border-primary">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-3 text-primary">⚙️ Tecnologias Utilizadas</h5>
+                        <ul>
+                            <li><strong>Frontend:</strong> HTML5, Bootstrap 5, JavaScript ES6</li>
+                            <li><strong>Gráficos:</strong> Chart.js (biblioteca de visualização)</li>
+                            <li><strong>Backend:</strong> PHP com PDO</li>
+                            <li><strong>Banco de Dados:</strong> MySQL/MariaDB</li>
+                            <li><strong>Armazenamento Local:</strong> LocalStorage para lista de compras</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Dicas -->
+                <div class="alert alert-warning mb-4">
+                    <h5>💡 Dicas Importantes:</h5>
+                    <ul class="mb-0">
+                        <li>A <strong>busca é case-insensitive</strong> e ignora acentos</li>
+                        <li>Os filtros podem ser <strong>combinados</strong> para resultados mais precisos</li>
+                        <li>Sua <strong>lista de compras é salva localmente</strong> no navegador</li>
+                        <li>Os gráficos são <strong>responsivos</strong> e adaptam para mobile</li>
+                        <li>Você pode <strong>adicionar novos produtos</strong> em "Adicionar Produto"</li>
+                    </ul>
+                </div>
+
+                <div class="text-center mt-5">
+                    <a href="index.html" class="btn btn-primary btn-lg me-2">🏠 Voltar à Home</a>
+                    <a href="busca.html" class="btn btn-success btn-lg">🔍 Começar a Buscar</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p class="mb-0">&copy; 2026 Preço-Hub. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

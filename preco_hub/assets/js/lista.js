@@ -1,4 +1,9 @@
 const STORAGE_LISTA = "listaProdutos";
+const STORAGE_PRODUTOS = "produtosCadastrados";
+const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
+
+let produtosBackendPromise = null;
+let estrategiaRenderId = 0;
 
 const ORDEM_MERCADOS = [
     "Savegnago",
@@ -27,8 +32,157 @@ function lerLista() {
     return dados ? JSON.parse(dados) : [];
 }
 
+function lerProdutosLocais() {
+    try {
+        const dados = localStorage.getItem(STORAGE_PRODUTOS);
+        const produtos = dados ? JSON.parse(dados) : [];
+
+        return Array.isArray(produtos) ? produtos : [];
+    } catch (erro) {
+        console.error("Erro ao ler produtos locais:", erro);
+        return [];
+    }
+}
+
 function salvarLista(lista) {
     localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
+}
+
+function normalizarTexto(texto) {
+    return String(texto || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterValorPreco(item) {
+    const valor = typeof item === "object" && item !== null ? item.preco : item;
+    const numero = Number(valor);
+
+    return Number.isFinite(numero) ? numero : null;
+}
+
+function normalizarPrecos(precos) {
+    if (!Array.isArray(precos)) {
+        return [];
+    }
+
+    return precos
+        .map(function (preco) {
+            return {
+                mercado: preco && preco.mercado ? preco.mercado : "",
+                preco: obterValorPreco(preco)
+            };
+        })
+        .filter(function (preco) {
+            return preco.mercado && preco.preco !== null;
+        });
+}
+
+async function buscarProdutosBackend() {
+    if (!produtosBackendPromise) {
+        produtosBackendPromise = fetch(API_LISTAR_PRODUTOS, {
+            headers: {
+                "Accept": "application/json"
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("Falha ao carregar produtos.");
+                }
+
+                return response.json();
+            })
+            .then(function (dados) {
+                if (!dados.success || !Array.isArray(dados.data)) {
+                    throw new Error("Resposta invalida do servidor.");
+                }
+
+                return dados.data;
+            })
+            .catch(function (erro) {
+                produtosBackendPromise = null;
+                throw erro;
+            });
+    }
+
+    return produtosBackendPromise;
+}
+
+function normalizarProdutoLocal(produto, indice) {
+    return {
+        id_produto: produto.id || "local-" + indice,
+        nome_produto: produto.nome || produto.nome_produto,
+        precos: produto.precos || []
+    };
+}
+
+async function buscarProdutosComparacao() {
+    const produtosLocais = lerProdutosLocais().map(normalizarProdutoLocal);
+
+    try {
+        const produtosBackend = await buscarProdutosBackend();
+        return produtosBackend.concat(produtosLocais);
+    } catch (erro) {
+        if (produtosLocais.length > 0) {
+            return produtosLocais;
+        }
+
+        throw erro;
+    }
+}
+
+function indexarProdutosPorNome(produtos) {
+    const indice = new Map();
+
+    produtos.forEach(function (produto) {
+        const nome = normalizarTexto(produto.nome_produto);
+
+        if (nome && !indice.has(nome)) {
+            indice.set(nome, produto);
+        }
+    });
+
+    return indice;
+}
+
+function obterAnaliseItem(item, produtosPorNome) {
+    const produto = produtosPorNome.get(normalizarTexto(item.nome));
+    const precoAtual = Number(item.preco) || 0;
+
+    if (!produto) {
+        return {
+            mercado: item.mercado,
+            preco: precoAtual,
+            economia: 0
+        };
+    }
+
+    const precos = normalizarPrecos(produto.precos);
+
+    if (precos.length === 0) {
+        return {
+            mercado: item.mercado,
+            preco: precoAtual,
+            economia: 0
+        };
+    }
+
+    const melhorPreco = precos.reduce(function (melhor, atual) {
+        return atual.preco < melhor.preco ? atual : melhor;
+    });
+
+    const maiorPreco = precos.reduce(function (maior, atual) {
+        return atual.preco > maior.preco ? atual : maior;
+    });
+
+    return {
+        mercado: melhorPreco.mercado,
+        preco: melhorPreco.preco,
+        economia: Math.max(maiorPreco.preco - melhorPreco.preco, 0)
+    };
 }
 
 function limparLista() {
@@ -89,7 +243,7 @@ function calcularSubtotalMercado(lista, mercado) {
         }, 0);
 }
 
-function calcularEstrategia(lista) {
+async function calcularEstrategia(lista, renderId) {
     const estrategiaContainer = document.getElementById("estrategiaCompra");
     if (!estrategiaContainer) return;
 
@@ -104,14 +258,42 @@ function calcularEstrategia(lista) {
         return;
     }
 
+    estrategiaContainer.innerHTML = `
+        <p class="mb-0 text-muted">Calculando a melhor estrategia...</p>
+    `;
+
+    let analises;
+
+    try {
+        const produtos = await buscarProdutosComparacao();
+
+        if (renderId !== estrategiaRenderId) {
+            return;
+        }
+
+        const produtosPorNome = indexarProdutosPorNome(produtos);
+        analises = pendentes.map(function (item) {
+            return obterAnaliseItem(item, produtosPorNome);
+        });
+    } catch (erro) {
+        console.error(erro);
+        analises = pendentes.map(function (item) {
+            return {
+                mercado: item.mercado,
+                preco: Number(item.preco) || 0,
+                economia: 0
+            };
+        });
+    }
+
     const mercadosUsados = [...new Set(
-        pendentes.map(function (item) {
+        analises.map(function (item) {
             return item.mercado;
-        })
+        }).filter(Boolean)
     )];
 
     const grupos = mercadosUsados.map(function (mercado) {
-        const itensDoMercado = pendentes.filter(function (item) {
+        const itensDoMercado = analises.filter(function (item) {
             return item.mercado === mercado;
         });
 
@@ -126,20 +308,9 @@ function calcularEstrategia(lista) {
         };
     });
 
-    const totalMelhorEstrategia = pendentes.reduce(function (total, item) {
-        return total + Number(item.preco);
+    const economia = analises.reduce(function (total, item) {
+        return total + Number(item.economia);
     }, 0);
-
-    const totalMaisCaro = pendentes
-        .slice()
-        .sort(function (a, b) {
-            return Number(b.preco) - Number(a.preco);
-        })
-        .reduce(function (total, item) {
-            return total + Number(item.preco);
-        }, 0);
-
-    const economia = totalMaisCaro - totalMelhorEstrategia;
 
     estrategiaContainer.innerHTML = `
         <div class="estrategia-box">
@@ -200,6 +371,7 @@ function renderizarLista() {
     totalItens.textContent = String(listaOriginal.length);
 
     if (listaOriginal.length === 0) {
+        estrategiaRenderId++;
         listaContainer.innerHTML = "";
         listaVazia.classList.remove("d-none");
         totalPendentes.textContent = "0";
@@ -288,7 +460,8 @@ function renderizarLista() {
     totalPendentes.textContent = String(pendentes);
     totalPreco.textContent = formatarPreco(total);
 
-    calcularEstrategia(listaOriginal);
+    estrategiaRenderId++;
+    calcularEstrategia(listaOriginal, estrategiaRenderId);
     ativarEventos();
 }
 

@@ -49,6 +49,7 @@ main {
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
     padding-top: 12px;
     padding-bottom: 12px;
+    z-index: 1000;
 }
 
 .logo-navbar {
@@ -629,6 +630,30 @@ table td {
     border-color: var(--borda);
 }
 
+/* ================= COMPARADOR ================= */
+
+.comparador-grafico {
+    position: relative;
+    width: 100%;
+}
+
+.comparador-grafico-principal {
+    height: 420px;
+}
+
+.comparador-grafico-secundario {
+    height: 360px;
+}
+
+.comparador-grafico canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#comparadorMensagem {
+    border-radius: 14px;
+}
+
 /* ================= FOOTER ================= */
 
 footer {
@@ -697,6 +722,11 @@ footer {
 
     .login-card {
         padding: 30px 24px;
+    }
+
+    .comparador-grafico-principal,
+    .comparador-grafico-secundario {
+        height: 320px;
     }
 }
 

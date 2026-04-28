@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Preços | Preço-Hub</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light navbar-profissional sticky-top">
+        <div class="container">
+
+            <a class="navbar-brand d-flex align-items-center gap-3" href="index.html">
+                <img src="assets/img/logo/logo.png" alt="Preço-Hub" class="logo-navbar">
+                <div class="brand-text">
+                    <span class="brand-title">Preço-Hub</span>
+                    <small class="brand-subtitle">Comparador inteligente de preços</small>
+                </div>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="menu">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="index.html">Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="busca.html">Buscar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom active" href="comparador.html">Comparador</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="lista.html">Minha Lista</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="adicionar-produto.html">Adicionar Produto</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="importar.html">Importar</a>
+                    </li>
+                    <li class="nav-item perfil-nav" id="perfilNav">
+                        <a class="btn btn-entrar ms-lg-2" id="botaoEntrar" href="login.html">Entrar</a>
+
+                        <button
+                            class="perfil-botao d-none ms-lg-2"
+                            type="button"
+                            id="botaoPerfil"
+                            aria-expanded="false"
+                            aria-controls="caixaPerfil">
+                            <span class="perfil-avatar" id="perfilAvatar">U</span>
+                            <span class="perfil-nome-curto" id="perfilNomeCurto">Perfil</span>
+                        </button>
+
+                        <div class="perfil-caixa d-none" id="caixaPerfil" aria-labelledby="botaoPerfil">
+                            <div class="perfil-caixa-topo">
+                                <span class="perfil-avatar perfil-avatar-grande" id="perfilAvatarGrande">U</span>
+                                <div>
+                                    <strong id="perfilNomeTopo">Usuário</strong>
+                                    <small>Usuário logado</small>
+                                </div>
+                            </div>
+
+                            <div class="perfil-info">
+                                <span>Nome</span>
+                                <strong id="perfilNome">Usuário</strong>
+                            </div>
+
+                            <div class="perfil-info">
+                                <span>Email</span>
+                                <strong id="perfilEmail">email@exemplo.com</strong>
+                            </div>
+
+                            <button class="btn btn-outline-danger w-100 mt-3" id="botaoSair" type="button">
+                                Sair da conta
+                            </button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </nav>
+
+    <main class="container my-5">
+        <div id="comparadorMensagem" class="alert alert-info d-none" role="alert"></div>
+
+        <!-- RESUMO DE ECONOMIA -->
+        <div class="row mb-5 comparador-conteudo">
+            <div class="col-md-3">
+                <div class="card bg-light border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted fw-600">Produtos na Lista</h6>
+                        <h3 class="text-primary fw-bold" id="totalProdutos">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted fw-600">Economia Máxima</h6>
+                        <h3 class="text-success fw-bold" id="economiaMaxima">R$ 0,00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted fw-600">Economia Média</h6>
+                        <h3 class="text-info fw-bold" id="economiaMedia">R$ 0,00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light border-0 shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted fw-600">Mercado + Barato</h6>
+                        <h3 class="text-warning fw-bold" id="mercadoMaisBarato">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICO DE PREÇOS POR MERCADO -->
+        <div class="row mb-5 comparador-conteudo">
+            <div class="col-lg-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">📊 Comparação de Preços por Mercado</h5>
+                        <div class="comparador-grafico comparador-grafico-principal">
+                            <canvas id="graficoPrecos"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICO DE ECONOMIA -->
+        <div class="row mb-5 comparador-conteudo">
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">💰 Economia por Produto</h5>
+                        <div class="comparador-grafico comparador-grafico-secundario">
+                            <canvas id="graficoEconomia"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">🏪 Distribuição de Preços</h5>
+                        <div class="comparador-grafico comparador-grafico-secundario">
+                            <canvas id="graficoDistribuicao"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABELA COMPARATIVA -->
+        <div class="row comparador-conteudo">
+            <div class="col-lg-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-4">📋 Comparação Detalhada</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tabelaComparacao">
+                                <thead class="table-light">
+                                    <tr id="cabecalhoTabelaComparacao">
+                                        <th>Produto</th>
+                                        <th>Savegnago</th>
+                                        <th>Favetta</th>
+                                        <th>Pague Menos</th>
+                                        <th>Melhor Preço</th>
+                                        <th>Economia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corpoTabela">
+                                    <!-- Preenchido por JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <p class="mb-0">&copy; 2026 Preço-Hub. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/perfil.js"></script>
+    <script src="assets/js/comparador.js"></script>
+
+</body>
+
+</html>

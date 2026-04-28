@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Recursos | Preço-Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .card-icon { font-size: 3em; margin-bottom: 15px; }
+        .btn-custom { border-radius: 25px; padding: 12px 30px; font-weight: 600; }
+        .header-section { color: white; text-align: center; padding: 40px 0 60px; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+        .feature-card { background: white; padding: 30px; border-radius: 15px; text-align: center; }
+        .badge-count { background: #2563EB; color: white; padding: 20px; border-radius: 10px; margin: 10px 0; }
+        .link-list { list-style: none; padding: 0; }
+        .link-list li { padding: 12px; border-bottom: 1px solid #eee; }
+        .link-list li:last-child { border-bottom: none; }
+        .link-list a { color: #2563EB; text-decoration: none; font-weight: 600; }
+        .link-list a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="header-section">
+        <h1 class="display-4 fw-bold mb-3">🎯 Centro de Recursos</h1>
+        <p class="lead">Preco-Hub - Comparador Inteligente de Preços</p>
+        <p class="text-white-50">Tudo que você precisa para usar e apresentar o projeto</p>
+    </div>
+
+    <!-- FUNCIONALIDADES -->
+    <div class="mb-5">
+        <h2 class="text-white mb-4 text-center">✨ 6 Funcionalidades Implementadas</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="card-icon">🔍</div>
+                <h5>Buscador Avançado</h5>
+                <p class="text-muted">Busca com filtros por categoria, mercado e preço</p>
+                <a href="busca.html" class="btn btn-primary btn-custom">Acessar</a>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon">📊</div>
+                <h5>Comparador Visual</h5>
+                <p class="text-muted">Gráficos e tabelas comparativas</p>
+                <a href="comparador.html" class="btn btn-success btn-custom">Acessar</a>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon">💰</div>
+                <h5>Cálculo de Economia</h5>
+                <p class="text-muted">Economia automática por produto</p>
+                <a href="comparador.html" class="btn btn-info btn-custom">Ver Comparador</a>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon">🎛️</div>
+                <h5>Filtros Avançados</h5>
+                <p class="text-muted">Categoria, mercado, faixa de preço</p>
+                <a href="busca.html" class="btn btn-warning btn-custom">Ir para Busca</a>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon">📈</div>
+                <h5>Gráficos Interativos</h5>
+                <p class="text-muted">Chart.js com 3 tipos de gráficos</p>
+                <a href="comparador.html" class="btn btn-danger btn-custom">Ver Gráficos</a>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon">🗄️</div>
+                <h5>Dados Reais</h5>
+                <p class="text-muted">8 produtos com 24 preços</p>
+                <a href="comparador.html" class="btn btn-secondary btn-custom">Ver Dados</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESTATÍSTICAS -->
+    <div class="row mb-5">
+        <div class="col-md-3">
+            <div class="badge-count text-center">
+                <div style="font-size: 2.5em;">6</div>
+                <div>Funcionalidades Novas</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="badge-count text-center" style="background: #22C55E;">
+                <div style="font-size: 2.5em;">6</div>
+                <div>Arquivos Criados</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="badge-count text-center" style="background: #F59E0B;">
+                <div style="font-size: 2.5em;">8</div>
+                <div>Produtos Testados</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="badge-count text-center" style="background: #EF4444;">
+                <div style="font-size: 2.5em;">24</div>
+                <div>Preços Cadastrados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECURSOS PRINCIPAIS -->
+    <div class="row mb-5">
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">🚀 Começar Agora</h5>
+                    <ul class="link-list">
+                        <li><a href="index.html">🏠 Voltar à Home</a></li>
+                        <li><a href="busca.html">🔍 Acessar Buscador</a></li>
+                        <li><a href="comparador.html">📊 Acessar Comparador</a></li>
+                        <li><a href="lista.html">📋 Minha Lista</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">📚 Documentação</h5>
+                    <ul class="link-list">
+                        <li><a href="guia.html" target="_blank">📖 Guia de Uso</a></li>
+                        <li><a href="SETUP_RAPIDO.md" target="_blank">⚙️ Setup Rápido</a></li>
+                        <li><a href="readme.md" target="_blank">📝 README Completo</a></li>
+                        <li><a href="IMPLEMENTACAO.md" target="_blank">🔧 Detalhes Técnicos</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">✅ Informações</h5>
+                    <ul class="link-list">
+                        <li><a href="status.html">📊 Status da Implementação</a></li>
+                        <li><a href="VERIFICACAO.txt" target="_blank">✓ Checklist Completo</a></li>
+                        <li><a href="#">💡 Próximas Melhorias</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DADOS DE TESTE -->
+    <div class="card mb-5 bg-white">
+        <div class="card-body">
+            <h5 class="card-title">🧪 Dados de Teste Inclusos</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>📦 8 Produtos:</h6>
+                    <ul class="small">
+                        <li>✓ Arroz Tio João Integral 5kg</li>
+                        <li>✓ Feijão Carioca Kicaldo 1kg</li>
+                        <li>✓ Macarrão Integral Barilla 500g</li>
+                        <li>✓ Café Pilão Tradicional 500g</li>
+                        <li>✓ Leite Integral Italac 1L</li>
+                        <li>✓ Óleo de Soja Liza 900ml</li>
+                        <li>✓ Farinha de Trigo Dona Benta 1kg</li>
+                        <li>✓ Suco Del Valle Uva 1L</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>🏪 3 Mercados com Preços Variados:</h6>
+                    <div class="alert alert-info mb-2">
+                        <strong>Savegnago</strong><br>
+                        Rua Exemplo, 100 - Centro
+                    </div>
+                    <div class="alert alert-info mb-2">
+                        <strong>Favetta</strong><br>
+                        Av. Exemplo, 200 - Jardim
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Pague Menos</strong><br>
+                        Rua Modelo, 300 - Vila
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRÓXIMOS PASSOS -->
+    <div class="card mb-5 bg-white border-success">
+        <div class="card-body">
+            <h5 class="card-title text-success">🎯 Próximos Passos</h5>
+            <ol>
+                <li><strong>Importe os dados:</strong> Siga o guia em SETUP_RAPIDO.md</li>
+                <li><strong>Teste o buscador:</strong> Procure por "Arroz"</li>
+                <li><strong>Veja os gráficos:</strong> Acesse o Comparador</li>
+                <li><strong>Teste os filtros:</strong> Combine categoria, mercado e preço</li>
+                <li><strong>Verifique a economia:</strong> Compare os preços</li>
+                <li><strong>Prepare sua apresentação:</strong> Use o guia.html como referência</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- SUGESTÕES FUTURAS -->
+    <div class="card mb-5 bg-white border-info">
+        <div class="card-body">
+            <h5 class="card-title text-info">💡 Sugestões para o Futuro</h5>
+            <ul class="small">
+                <li>📈 Histórico de preços com gráficos de evolução</li>
+                <li>🔔 Alertas quando preço cai</li>
+                <li>🗺️ Integração com Google Maps</li>
+                <li>📱 App mobile com React Native</li>
+                <li>🤖 APIs de mercados reais</li>
+                <li>🎯 Dashboard administrativo</li>
+                <li>👥 Compartilhamento de listas</li>
+                <li>🌙 Modo escuro</li>
+                <li>📊 Exportação em PDF</li>
+                <li>⭐ Avaliações de mercados</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- SUPORTE -->
+    <div class="alert alert-light border">
+        <h5>❓ Dúvidas?</h5>
+        <ul class="mb-0">
+            <li>Consulte o <a href="guia.html"><strong>Guia de Uso</strong></a> para tutorial visual</li>
+            <li>Leia o <a href="readme.md"><strong>README</strong></a> para documentação técnica</li>
+            <li>Veja <a href="SETUP_RAPIDO.md"><strong>Setup Rápido</strong></a> para configuração</li>
+            <li>Confira <a href="IMPLEMENTACAO.md"><strong>Detalhes Técnicos</strong></a> para código</li>
+        </ul>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="text-center py-4 text-white">
+        <p>Desenvolvido com ❤️ para economizar sua grana! 💰</p>
+        <small>Preço-Hub © 2026 - TCC</small>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
