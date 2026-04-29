@@ -1,8 +1,51 @@
 (function () {
     var STORAGE_USUARIO_LOGADO = "usuarioLogado";
+    var ADMIN_EMAIL = "admin@gmail.com";
 
     function obterElemento(id) {
         return document.getElementById(id);
+    }
+
+    function usuarioEhAdmin(usuario) {
+        var email = usuario && usuario.email ? usuario.email.toLowerCase() : "";
+        return email === ADMIN_EMAIL;
+    }
+
+    function paginaAdminAtual() {
+        return document.body && document.body.dataset.adminPage === "true";
+    }
+
+    function obterUsuarioSalvo() {
+        var dados = localStorage.getItem(STORAGE_USUARIO_LOGADO);
+
+        if (!dados) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(dados);
+        } catch (error) {
+            localStorage.removeItem(STORAGE_USUARIO_LOGADO);
+            return null;
+        }
+    }
+
+    function redirecionarSeAcessoAdminInvalido(usuario) {
+        if (!paginaAdminAtual()) {
+            return false;
+        }
+
+        if (!usuario) {
+            window.location.replace("login.html");
+            return true;
+        }
+
+        if (!usuarioEhAdmin(usuario)) {
+            window.location.replace("index.html");
+            return true;
+        }
+
+        return false;
     }
 
     function obterIniciais(usuario) {
@@ -50,8 +93,23 @@
         var botaoEntrar = obterElemento("botaoEntrar");
         var botaoPerfil = obterElemento("botaoPerfil");
         var caixaPerfil = obterElemento("caixaPerfil");
+        var botaoAdmin = obterElemento("botaoAdmin");
 
         localStorage.removeItem(STORAGE_USUARIO_LOGADO);
+        
+        // Ocultar abas de admin para usuários não-logados
+        var navLinks = document.querySelectorAll(".navbar-nav .nav-item");
+        navLinks.forEach(function(navItem) {
+            var link = navItem.querySelector("a");
+            if (link) {
+                var href = link.getAttribute("href");
+                var isAbaProduto = href && (href.includes("adicionar-produto") || href.includes("importar") || href.includes("visualizador"));
+                
+                if (isAbaProduto) {
+                    navItem.classList.add("d-none");
+                }
+            }
+        });
 
         if (botaoEntrar) {
             botaoEntrar.classList.remove("d-none");
@@ -64,6 +122,10 @@
 
         if (caixaPerfil) {
             caixaPerfil.classList.add("d-none");
+        }
+
+        if (botaoAdmin) {
+            botaoAdmin.remove();
         }
     }
 
@@ -90,11 +152,61 @@
         });
     }
 
+    function controlarAbasAdmin(usuario) {
+        var isAdmin = usuarioEhAdmin(usuario);
+        var navLinks = document.querySelectorAll(".navbar-nav .nav-item");
+        
+        navLinks.forEach(function(navItem) {
+            var link = navItem.querySelector("a");
+            if (link) {
+                var href = link.getAttribute("href");
+                var isAbaProduto = href && (href.includes("adicionar-produto") || href.includes("importar") || href.includes("visualizador"));
+                
+                if (isAbaProduto) {
+                    if (isAdmin) {
+                        navItem.classList.remove("d-none");
+                    } else {
+                        navItem.classList.add("d-none");
+                    }
+                }
+            }
+        });
+    }
+
+    function controlarAtalhoAdmin(usuario) {
+        var caixaPerfil = obterElemento("caixaPerfil");
+        var botaoSair = obterElemento("botaoSair");
+        var botaoAdmin = obterElemento("botaoAdmin");
+        var deveMostrarAtalho = usuarioEhAdmin(usuario) && !paginaAdminAtual();
+
+        if (!caixaPerfil || !botaoSair) {
+            return;
+        }
+
+        if (!deveMostrarAtalho) {
+            if (botaoAdmin) {
+                botaoAdmin.remove();
+            }
+            return;
+        }
+
+        if (!botaoAdmin) {
+            botaoAdmin = document.createElement("a");
+            botaoAdmin.id = "botaoAdmin";
+            botaoAdmin.className = "btn btn-outline-primary w-100 mt-3";
+            botaoAdmin.href = "adicionar-produto.html";
+            botaoAdmin.textContent = "Voltar para o admin";
+            caixaPerfil.insertBefore(botaoAdmin, botaoSair);
+        }
+    }
+
     function mostrarPerfil(usuario) {
         var botaoEntrar = obterElemento("botaoEntrar");
         var botaoPerfil = obterElemento("botaoPerfil");
 
         preencherPerfil(usuario);
+        controlarAbasAdmin(usuario);
+        controlarAtalhoAdmin(usuario);
         localStorage.setItem(STORAGE_USUARIO_LOGADO, JSON.stringify(usuario));
 
         if (botaoEntrar) {
@@ -134,6 +246,13 @@
 
         fecharCaixa();
         mostrarEntrar();
+
+        if (window.location.pathname.endsWith("/index.html") || window.location.pathname.endsWith("/")) {
+            window.location.reload();
+            return;
+        }
+
+        window.location.href = "index.html";
     }
 
     function registrarEventos() {
@@ -177,11 +296,22 @@
             return;
         }
 
-        mostrarEntrar();
         registrarEventos();
+
+        var usuarioSalvo = obterUsuarioSalvo();
+
+        if (usuarioSalvo) {
+            mostrarPerfil(usuarioSalvo);
+        } else {
+            mostrarEntrar();
+        }
 
         try {
             var usuario = await buscarUsuarioDaSessao();
+
+            if (redirecionarSeAcessoAdminInvalido(usuario)) {
+                return;
+            }
 
             if (usuario) {
                 mostrarPerfil(usuario);
@@ -190,6 +320,11 @@
             }
         } catch (error) {
             console.error(error);
+
+            if (redirecionarSeAcessoAdminInvalido(null)) {
+                return;
+            }
+
             mostrarEntrar();
         }
     }

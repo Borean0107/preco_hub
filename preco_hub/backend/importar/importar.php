@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . "/../middleware/admin.php";
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 

@@ -190,8 +190,7 @@ CREATE TABLE `usuario` (
 --
 
 INSERT INTO `usuario` (`id_usuario`, `nome_usuario`, `email_usuario`, `senha_usuario`, `data_criacao_usuario`) VALUES
-(1, 'julio', 'matheusteves53@gmail.com', '$2y$10$6xCJ9lej8jx3WOKhm4rp0OozG2y/chRAtvse0Z0dS/rc1YnV/gy5y', '2026-03-23 20:37:54'),
-(2, 'matheus', 'matheusborean@gmail.com', '$2y$10$67FXKeFnNi2hce3MI3mYgOBArdgM3vjfkk2RZa6/BOymPzODvJRI2', '2026-03-23 21:42:08');
+(3, 'admin', 'admin@gmail.com', '$2y$10$IqcGp03nc2fIbKzVVGqVveokmM8K9Odvr.yDJ10r2MmaT0aRMhubm', '2026-04-29 00:00:00');
 
 -- --------------------------------------------------------
 

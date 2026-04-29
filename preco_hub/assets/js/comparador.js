@@ -392,7 +392,7 @@ async function carregarProdutos() {
         if (lista.length === 0) {
             produtosGlobal = [];
             mostrarMensagem(
-                '<strong>Sua lista ainda esta vazia.</strong> Adicione produtos em <a href="busca.html" class="alert-link">Buscar</a> ou na pagina inicial para ver o comparador.',
+                '<strong>Sua lista ainda esta vazia.</strong> Use a lupa de busca no menu ou adicione produtos pela pagina inicial para ver o comparador.',
                 "info"
             );
             return;

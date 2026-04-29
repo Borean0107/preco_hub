@@ -1,4 +1,5 @@
 const STORAGE_USUARIO_LOGADO = "usuarioLogado";
+const ADMIN_EMAIL = "admin@gmail.com";
 
 const loginForm = document.getElementById("loginForm");
 const mensagemLogin = document.getElementById("mensagemLogin");
@@ -21,6 +22,36 @@ function esconderMensagemLogin() {
 function salvarUsuarioLogado(usuario) {
     localStorage.setItem(STORAGE_USUARIO_LOGADO, JSON.stringify(usuario));
 }
+
+function usuarioEhAdmin(usuario) {
+    const emailUsuario = usuario && usuario.email ? usuario.email.toLowerCase() : "";
+    return emailUsuario === ADMIN_EMAIL;
+}
+
+function redirecionarUsuarioLogado(usuario) {
+    window.location.href = usuarioEhAdmin(usuario) ? "adicionar-produto.html" : "index.html";
+}
+
+fetch("backend/auth/me.php", {
+    credentials: "include",
+    headers: {
+        "Accept": "application/json"
+    }
+})
+.then(function (response) {
+    if (!response.ok) {
+        return null;
+    }
+
+    return response.json();
+})
+.then(function (data) {
+    if (data && data.success && data.data) {
+        salvarUsuarioLogado(data.data);
+        redirecionarUsuarioLogado(data.data);
+    }
+})
+.catch(function () {});
 
 if (loginForm) {
     loginForm.addEventListener("submit", function (event) {
@@ -56,7 +87,7 @@ if (loginForm) {
                 salvarUsuarioLogado(data.data);
                 mostrarMensagemLogin("success", data.message || "Login realizado com sucesso.");
                 setTimeout(function () {
-                    window.location.href = "index.html";
+                    redirecionarUsuarioLogado(data.data);
                 }, 1000);
             } else {
                 mostrarMensagemLogin("danger", data.message || "Email ou senha inválidos.");

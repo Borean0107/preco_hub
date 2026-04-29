@@ -69,6 +69,41 @@ function salvarListaCompras(lista) {
     localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
 }
 
+function mostrarAvisoSite(titulo, texto, tipo) {
+    let container = document.getElementById("avisosSite");
+    const tipoFinal = tipo || "success";
+    const aviso = document.createElement("div");
+
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "avisosSite";
+        container.className = "site-toast-container";
+        container.setAttribute("aria-live", "polite");
+        container.setAttribute("aria-atomic", "false");
+        document.body.appendChild(container);
+    }
+
+    aviso.className = "site-toast site-toast-" + tipoFinal;
+    aviso.setAttribute("role", "status");
+    aviso.innerHTML = `
+        <strong>${escaparHtml(titulo)}</strong>
+        <span>${escaparHtml(texto)}</span>
+    `;
+
+    container.appendChild(aviso);
+
+    aviso.toastTimeout = window.setTimeout(function () {
+        aviso.classList.add("is-hiding");
+        aviso.addEventListener("animationend", function () {
+            aviso.remove();
+
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, { once: true });
+    }, 3000);
+}
+
 function adicionarProdutoNaLista(nome, preco, mercado) {
     const lista = lerListaCompras();
 
@@ -83,7 +118,7 @@ function adicionarProdutoNaLista(nome, preco, mercado) {
     lista.push(novoItem);
     salvarListaCompras(lista);
 
-    alert(nome + " foi adicionado à sua lista.");
+    mostrarAvisoSite("Produto adicionado", nome + " foi adicionado a sua lista.");
 }
 
 function ordenarPrecosDosCards() {

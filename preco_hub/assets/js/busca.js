@@ -27,6 +27,41 @@ function salvarListaCompras(lista) {
     localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
 }
 
+function mostrarAvisoSite(titulo, texto, tipo) {
+    let container = document.getElementById("avisosSite");
+    const tipoFinal = tipo || "success";
+    const aviso = document.createElement("div");
+
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "avisosSite";
+        container.className = "site-toast-container";
+        container.setAttribute("aria-live", "polite");
+        container.setAttribute("aria-atomic", "false");
+        document.body.appendChild(container);
+    }
+
+    aviso.className = "site-toast site-toast-" + tipoFinal;
+    aviso.setAttribute("role", "status");
+    aviso.innerHTML = `
+        <strong>${escaparHtml(titulo)}</strong>
+        <span>${escaparHtml(texto)}</span>
+    `;
+
+    container.appendChild(aviso);
+
+    aviso.toastTimeout = window.setTimeout(function () {
+        aviso.classList.add("is-hiding");
+        aviso.addEventListener("animationend", function () {
+            aviso.remove();
+
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, { once: true });
+    }, 3000);
+}
+
 async function carregarMercados() {
     const filtroMercado = document.getElementById("filtroMercado");
 
@@ -88,7 +123,7 @@ function adicionarNaLista(nomeProduto, preco, mercado) {
     };
     lista.push(novoItem);
     salvarListaCompras(lista);
-    alert(nomeProduto + " adicionado à lista de compras!");
+    mostrarAvisoSite("Produto adicionado", nomeProduto + " foi adicionado a sua lista.");
 }
 
 function obterMelhorPreco(precos) {
@@ -146,7 +181,7 @@ async function realizarBusca() {
     const precoMax = document.getElementById("precoMax").value;
 
     if (termo.length < 2) {
-        alert("Digite pelo menos 2 caracteres para buscar.");
+        mostrarAvisoSite("Busca incompleta", "Digite pelo menos 2 caracteres para buscar.", "warning");
         return;
     }
 
@@ -181,7 +216,7 @@ async function realizarBusca() {
     } catch (erro) {
         document.getElementById("carregando").classList.add("d-none");
         console.error("Erro na busca:", erro);
-        alert("Erro ao realizar a busca. Tente novamente.");
+        mostrarAvisoSite("Erro na busca", "Tente novamente em instantes.", "danger");
     }
 }
 
