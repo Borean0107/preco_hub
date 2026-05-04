@@ -306,7 +306,7 @@
                 aria-label="Pesquisar produtos"
                 aria-expanded="false"
                 aria-controls="buscaRapidaPainel">
-                <span aria-hidden="true">&#128269;</span>
+                <img src="assets/img/icons/lupa.png" alt="" class="busca-rapida-icone" aria-hidden="true">
             </button>
 
             <div class="busca-rapida-painel d-none" id="buscaRapidaPainel">
