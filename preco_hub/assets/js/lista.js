@@ -1,6 +1,10 @@
-const STORAGE_LISTA = "listaProdutos";
-const STORAGE_PRODUTOS = "produtosCadastrados";
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
+const API_LISTA_LISTAR = "backend/listas/listar.php";
+const API_LISTA_ADICIONAR = "backend/listas/adicionar.php";
+const API_LISTA_REMOVER = "backend/listas/remover.php";
+const API_LISTA_MARCAR = "backend/listas/marcar.php";
+const API_LISTA_LIMPAR = "backend/listas/limpar.php";
+const API_LISTA_QUANTIDADE = "backend/listas/quantidade.php";
 
 let produtosBackendPromise = null;
 let estrategiaRenderId = 0;
@@ -27,27 +31,6 @@ function escaparHtml(valor) {
         .replace(/'/g, "&#039;");
 }
 
-function lerLista() {
-    const dados = localStorage.getItem(STORAGE_LISTA);
-    return dados ? JSON.parse(dados) : [];
-}
-
-function lerProdutosLocais() {
-    try {
-        const dados = localStorage.getItem(STORAGE_PRODUTOS);
-        const produtos = dados ? JSON.parse(dados) : [];
-
-        return Array.isArray(produtos) ? produtos : [];
-    } catch (erro) {
-        console.error("Erro ao ler produtos locais:", erro);
-        return [];
-    }
-}
-
-function salvarLista(lista) {
-    localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
-}
-
 function normalizarTexto(texto) {
     return String(texto || "")
         .toLowerCase()
@@ -55,6 +38,17 @@ function normalizarTexto(texto) {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+async function lerJsonSeguro(response) {
+    const texto = await response.text();
+    const inicioJson = texto.indexOf("{");
+
+    if (inicioJson === -1) {
+        throw new Error("Resposta invalida do servidor.");
+    }
+
+    return JSON.parse(texto.slice(inicioJson));
 }
 
 function obterValorPreco(item) {
@@ -111,52 +105,154 @@ async function buscarProdutosBackend() {
     return produtosBackendPromise;
 }
 
-function normalizarProdutoLocal(produto, indice) {
-    return {
-        id_produto: produto.id || "local-" + indice,
-        nome_produto: produto.nome || produto.nome_produto,
-        precos: produto.precos || []
-    };
+async function buscarLista() {
+    const response = await fetch(API_LISTA_LISTAR, {
+        credentials: "include",
+        headers: {
+            "Accept": "application/json"
+        }
+    });
+    const dados = await lerJsonSeguro(response);
+
+    if (response.status === 401) {
+        throw new Error("Entre na sua conta para ver a sua lista.");
+    }
+
+    if (!response.ok || !dados.success || !Array.isArray(dados.data)) {
+        throw new Error(dados.message || "Nao foi possivel carregar a lista.");
+    }
+
+    let lista = dados.data.map(function (item) {
+        return {
+            id: item.id_lista_produto,
+            id_produto: item.id_produto,
+            nome: item.nome,
+            quantidade: Math.max(Number(item.quantidade) || 1, 1),
+            preco: Number(item.preco) || 0,
+            mercado: item.mercado || "Mercado",
+            comprado: Boolean(item.comprado)
+        };
+    });
+
+    if (lista.length === 0) {
+        const migrou = await migrarListaLocalParaBanco();
+
+        if (migrou) {
+            return buscarLista();
+        }
+    }
+
+    return lista;
 }
 
-async function buscarProdutosComparacao() {
-    const produtosLocais = lerProdutosLocais().map(normalizarProdutoLocal);
-
+function obterUsuarioLocal() {
     try {
-        const produtosBackend = await buscarProdutosBackend();
-        return produtosBackend.concat(produtosLocais);
+        const dados = localStorage.getItem("usuarioLogado");
+        return dados ? JSON.parse(dados) : null;
     } catch (erro) {
-        if (produtosLocais.length > 0) {
-            return produtosLocais;
-        }
-
-        throw erro;
+        return null;
     }
 }
 
-function indexarProdutosPorNome(produtos) {
+function lerListaLocalLegada() {
+    const usuario = obterUsuarioLocal();
+    const chaves = ["listaProdutos"];
+
+    if (usuario && usuario.id) {
+        chaves.unshift("listaProdutos:usuario:" + usuario.id);
+    }
+
+    for (const chave of chaves) {
+        try {
+            const dados = localStorage.getItem(chave);
+            const lista = dados ? JSON.parse(dados) : [];
+
+            if (Array.isArray(lista) && lista.length > 0) {
+                return { chave: chave, lista: lista };
+            }
+        } catch (erro) {
+            localStorage.removeItem(chave);
+        }
+    }
+
+    return null;
+}
+
+async function migrarListaLocalParaBanco() {
+    const usuario = obterUsuarioLocal();
+    const chaveMigracao = usuario && usuario.id ? "listaMigradaBanco:usuario:" + usuario.id : "";
+
+    if (!chaveMigracao || localStorage.getItem(chaveMigracao)) {
+        return false;
+    }
+
+    const legado = lerListaLocalLegada();
+
+    if (!legado) {
+        localStorage.setItem(chaveMigracao, "1");
+        return false;
+    }
+
+    const produtos = await buscarProdutosBackend();
+    const produtosPorNome = new Map();
+
+    produtos.forEach(function (produto) {
+        produtosPorNome.set(normalizarTexto(produto.nome_produto), produto);
+    });
+
+    let itensMigrados = 0;
+    let itensIgnorados = 0;
+
+    for (const item of legado.lista) {
+        const produto = produtosPorNome.get(normalizarTexto(item.nome));
+        const quantidade = Math.max(Number(item.quantidade) || 1, 1);
+
+        if (!produto || !produto.id_produto) {
+            itensIgnorados++;
+            continue;
+        }
+
+        for (let i = 0; i < quantidade; i++) {
+            await executarAcaoLista(API_LISTA_ADICIONAR, {
+                id_produto: produto.id_produto
+            });
+        }
+
+        itensMigrados++;
+    }
+
+    if (itensMigrados === 0) {
+        return false;
+    }
+
+    if (itensIgnorados === 0) {
+        localStorage.setItem(chaveMigracao, "1");
+        localStorage.removeItem(legado.chave);
+    }
+
+    return true;
+}
+
+function indexarProdutosPorId(produtos) {
     const indice = new Map();
 
     produtos.forEach(function (produto) {
-        const nome = normalizarTexto(produto.nome_produto);
-
-        if (nome && !indice.has(nome)) {
-            indice.set(nome, produto);
-        }
+        indice.set(Number(produto.id_produto), produto);
     });
 
     return indice;
 }
 
-function obterAnaliseItem(item, produtosPorNome) {
-    const produto = produtosPorNome.get(normalizarTexto(item.nome));
+function obterAnaliseItem(item, produtosPorId) {
+    const produto = produtosPorId.get(Number(item.id_produto));
     const precoAtual = Number(item.preco) || 0;
 
     if (!produto) {
         return {
             mercado: item.mercado,
             preco: precoAtual,
-            economia: 0
+            economia: 0,
+            quantidade: item.quantidade
         };
     }
 
@@ -166,7 +262,8 @@ function obterAnaliseItem(item, produtosPorNome) {
         return {
             mercado: item.mercado,
             preco: precoAtual,
-            economia: 0
+            economia: 0,
+            quantidade: item.quantidade
         };
     }
 
@@ -181,37 +278,55 @@ function obterAnaliseItem(item, produtosPorNome) {
     return {
         mercado: melhorPreco.mercado,
         preco: melhorPreco.preco,
-        economia: Math.max(maiorPreco.preco - melhorPreco.preco, 0)
+        economia: Math.max(maiorPreco.preco - melhorPreco.preco, 0),
+        quantidade: item.quantidade
     };
 }
 
-function limparLista() {
-    localStorage.removeItem(STORAGE_LISTA);
+async function executarAcaoLista(url, body) {
+    const response = await fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            "Accept": "application/json"
+        },
+        body: new URLSearchParams(body || {})
+    });
+    const dados = await lerJsonSeguro(response);
+
+    if (!response.ok || !dados.success) {
+        throw new Error(dados.message || "Nao foi possivel atualizar a lista.");
+    }
+
+    window.dispatchEvent(new CustomEvent("precohub:lista-atualizada"));
+    return dados;
+}
+
+async function limparLista() {
+    await executarAcaoLista(API_LISTA_LIMPAR);
     renderizarLista();
 }
 
-function removerItem(id) {
-    const listaAtualizada = lerLista().filter(function (item) {
-        return item.id !== id;
+async function removerItem(id) {
+    await executarAcaoLista(API_LISTA_REMOVER, {
+        id_lista_produto: id
     });
-
-    salvarLista(listaAtualizada);
     renderizarLista();
 }
 
-function marcarComprado(id, checked) {
-    const listaAtualizada = lerLista().map(function (item) {
-        if (item.id === id) {
-            return {
-                ...item,
-                comprado: checked
-            };
-        }
-
-        return item;
+async function alterarQuantidade(id, acao) {
+    await executarAcaoLista(API_LISTA_QUANTIDADE, {
+        id_lista_produto: id,
+        acao: acao
     });
+    renderizarLista();
+}
 
-    salvarLista(listaAtualizada);
+async function marcarComprado(id, checked) {
+    await executarAcaoLista(API_LISTA_MARCAR, {
+        id_lista_produto: id,
+        comprado: checked ? 1 : 0
+    });
     renderizarLista();
 }
 
@@ -239,7 +354,7 @@ function calcularSubtotalMercado(lista, mercado) {
             return item.mercado === mercado && !item.comprado;
         })
         .reduce(function (total, item) {
-            return total + Number(item.preco);
+            return total + Number(item.preco) * item.quantidade;
         }, 0);
 }
 
@@ -253,7 +368,7 @@ async function calcularEstrategia(lista, renderId) {
 
     if (pendentes.length === 0) {
         estrategiaContainer.innerHTML = `
-            <p class="mb-0 text-muted">Todos os itens já foram marcados como comprados.</p>
+            <p class="mb-0 text-muted">Todos os itens ja foram marcados como comprados.</p>
         `;
         return;
     }
@@ -265,15 +380,15 @@ async function calcularEstrategia(lista, renderId) {
     let analises;
 
     try {
-        const produtos = await buscarProdutosComparacao();
+        const produtos = await buscarProdutosBackend();
 
         if (renderId !== estrategiaRenderId) {
             return;
         }
 
-        const produtosPorNome = indexarProdutosPorNome(produtos);
+        const produtosPorId = indexarProdutosPorId(produtos);
         analises = pendentes.map(function (item) {
-            return obterAnaliseItem(item, produtosPorNome);
+            return obterAnaliseItem(item, produtosPorId);
         });
     } catch (erro) {
         console.error(erro);
@@ -281,7 +396,8 @@ async function calcularEstrategia(lista, renderId) {
             return {
                 mercado: item.mercado,
                 preco: Number(item.preco) || 0,
-                economia: 0
+                economia: 0,
+                quantidade: item.quantidade
             };
         });
     }
@@ -298,24 +414,28 @@ async function calcularEstrategia(lista, renderId) {
         });
 
         const subtotal = itensDoMercado.reduce(function (soma, item) {
-            return soma + Number(item.preco);
+            return soma + Number(item.preco) * item.quantidade;
+        }, 0);
+
+        const quantidade = itensDoMercado.reduce(function (soma, item) {
+            return soma + item.quantidade;
         }, 0);
 
         return {
             mercado: mercado,
-            quantidade: itensDoMercado.length,
+            quantidade: quantidade,
             subtotal: subtotal
         };
     });
 
     const economia = analises.reduce(function (total, item) {
-        return total + Number(item.economia);
+        return total + Number(item.economia) * item.quantidade;
     }, 0);
 
     estrategiaContainer.innerHTML = `
         <div class="estrategia-box">
             <p class="mb-2">
-                <strong>Melhor estratégia:</strong> comprar em <strong>${mercadosUsados.length} mercado(s)</strong>.
+                <strong>Melhor estrategia:</strong> comprar em <strong>${mercadosUsados.length} mercado(s)</strong>.
             </p>
 
             <p class="mb-3">
@@ -336,24 +456,134 @@ async function calcularEstrategia(lista, renderId) {
     `;
 }
 
-function ativarEventos() {
-    const botoesRemover = document.querySelectorAll(".remover-item");
-    const checkboxes = document.querySelectorAll(".checkbox-item");
+function mostrarErroLista(mensagem) {
+    const listaContainer = document.getElementById("listaCompras");
+    const listaVazia = document.getElementById("listaVazia");
+    const btnLimparLista = document.getElementById("limparLista");
 
-    botoesRemover.forEach(function (botao) {
-        botao.addEventListener("click", function () {
-            removerItem(Number(botao.dataset.id));
+    if (listaContainer) {
+        listaContainer.innerHTML = "";
+    }
+
+    if (listaVazia) {
+        listaVazia.textContent = mensagem;
+        listaVazia.className = "alert alert-warning";
+    }
+
+    if (btnLimparLista) {
+        btnLimparLista.disabled = true;
+    }
+}
+
+function obterModalConfirmacaoLista() {
+    let modal = document.getElementById("modalConfirmacaoLista");
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.id = "modalConfirmacaoLista";
+    modal.className = "modal-lista-confirmacao d-none";
+    modal.innerHTML = `
+        <div class="modal-lista-backdrop" data-modal-fechar="true"></div>
+        <div class="modal-lista-card" role="dialog" aria-modal="true" aria-labelledby="modalListaTitulo">
+            <div class="modal-lista-icone" aria-hidden="true">!</div>
+            <h2 id="modalListaTitulo">Confirmar ação</h2>
+            <p id="modalListaTexto">Tem certeza?</p>
+            <div class="modal-lista-acoes">
+                <button type="button" class="btn btn-outline-secondary" id="modalListaCancelar">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="modalListaConfirmar">Confirmar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function confirmarAcaoLista(opcoes) {
+    const modal = obterModalConfirmacaoLista();
+    const titulo = document.getElementById("modalListaTitulo");
+    const texto = document.getElementById("modalListaTexto");
+    const botaoCancelar = document.getElementById("modalListaCancelar");
+    const botaoConfirmar = document.getElementById("modalListaConfirmar");
+
+    titulo.textContent = opcoes.titulo || "Confirmar acao";
+    texto.textContent = opcoes.texto || "Tem certeza que deseja continuar?";
+    botaoConfirmar.textContent = opcoes.confirmar || "Confirmar";
+
+    modal.classList.remove("d-none");
+    document.body.classList.add("modal-lista-aberto");
+
+    return new Promise(function (resolve) {
+        function fechar(confirmado) {
+            modal.classList.add("d-none");
+            document.body.classList.remove("modal-lista-aberto");
+            botaoCancelar.removeEventListener("click", cancelar);
+            botaoConfirmar.removeEventListener("click", confirmar);
+            modal.removeEventListener("click", clicarFora);
+            document.removeEventListener("keydown", teclar);
+            resolve(confirmado);
+        }
+
+        function cancelar() {
+            fechar(false);
+        }
+
+        function confirmar() {
+            fechar(true);
+        }
+
+        function clicarFora(event) {
+            if (event.target && event.target.dataset.modalFechar === "true") {
+                fechar(false);
+            }
+        }
+
+        function teclar(event) {
+            if (event.key === "Escape") {
+                fechar(false);
+            }
+        }
+
+        botaoCancelar.addEventListener("click", cancelar);
+        botaoConfirmar.addEventListener("click", confirmar);
+        modal.addEventListener("click", clicarFora);
+        document.addEventListener("keydown", teclar);
+        botaoCancelar.focus();
+    });
+}
+
+function ativarEventos() {
+    document.querySelectorAll(".remover-item").forEach(function (botao) {
+        botao.addEventListener("click", async function () {
+            const confirmado = await confirmarAcaoLista({
+                titulo: "Remover item",
+                texto: "Este produto sera removido da sua lista de compras.",
+                confirmar: "Remover"
+            });
+
+            if (confirmado) {
+                await removerItem(botao.dataset.id);
+            }
         });
     });
 
-    checkboxes.forEach(function (checkbox) {
+    document.querySelectorAll(".quantidade-item").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            alterarQuantidade(botao.dataset.id, botao.dataset.acao);
+        });
+    });
+
+    document.querySelectorAll(".checkbox-item").forEach(function (checkbox) {
         checkbox.addEventListener("change", function () {
-            marcarComprado(Number(checkbox.dataset.id), checkbox.checked);
+            marcarComprado(checkbox.dataset.id, checkbox.checked);
         });
     });
 }
 
-function renderizarLista() {
+async function renderizarLista() {
     const listaContainer = document.getElementById("listaCompras");
     const totalItens = document.getElementById("totalItens");
     const totalPendentes = document.getElementById("totalPendentes");
@@ -365,10 +595,28 @@ function renderizarLista() {
         return;
     }
 
-    const listaOriginal = lerLista();
-    const listaOrdenada = ordenarPorMercado(listaOriginal);
+    listaContainer.innerHTML = '<p class="mb-0 text-muted">Carregando sua lista...</p>';
 
-    totalItens.textContent = String(listaOriginal.length);
+    let listaOriginal = [];
+
+    try {
+        listaOriginal = await buscarLista();
+    } catch (erro) {
+        console.error(erro);
+        estrategiaRenderId++;
+        totalItens.textContent = "0";
+        totalPendentes.textContent = "0";
+        totalPreco.textContent = "R$ 0,00";
+        mostrarErroLista(erro.message);
+        return;
+    }
+
+    const listaOrdenada = ordenarPorMercado(listaOriginal);
+    const totalQuantidade = listaOriginal.reduce(function (soma, item) {
+        return soma + item.quantidade;
+    }, 0);
+
+    totalItens.textContent = String(totalQuantidade);
 
     if (listaOriginal.length === 0) {
         estrategiaRenderId++;
@@ -379,7 +627,7 @@ function renderizarLista() {
 
         const estrategiaContainer = document.getElementById("estrategiaCompra");
         if (estrategiaContainer) {
-            estrategiaContainer.innerHTML = "Ainda não há dados suficientes para calcular a estratégia.";
+            estrategiaContainer.innerHTML = "Ainda nao ha dados suficientes para calcular a estrategia.";
         }
 
         if (btnLimparLista) {
@@ -401,7 +649,6 @@ function renderizarLista() {
 
     listaContainer.innerHTML = listaOrdenada.map(function (item) {
         const mostrarTituloMercado = item.mercado !== mercadoAtual;
-
         let blocoMercado = "";
 
         if (mostrarTituloMercado) {
@@ -422,8 +669,8 @@ function renderizarLista() {
         mercadoAtual = item.mercado;
 
         if (!item.comprado) {
-            total += Number(item.preco);
-            pendentes++;
+            total += Number(item.preco) * item.quantidade;
+            pendentes += item.quantidade;
         }
 
         return `
@@ -434,7 +681,7 @@ function renderizarLista() {
                     <input
                         class="form-check-input checkbox-item"
                         type="checkbox"
-                        data-id="${item.id}"
+                        data-id="${escaparHtml(item.id)}"
                         ${item.comprado ? "checked" : ""}
                     >
 
@@ -443,14 +690,21 @@ function renderizarLista() {
                     </label>
                 </div>
 
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <span class="fw-semibold">${formatarPreco(item.preco)}</span>
+                <div class="d-flex align-items-center gap-2 flex-wrap lista-item-acoes">
+                    <span class="fw-semibold">${formatarPreco(item.preco * item.quantidade)}</span>
+                    <small class="text-muted">(${formatarPreco(item.preco)} un.)</small>
+
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Quantidade">
+                        <button type="button" class="btn btn-outline-secondary quantidade-item" data-id="${escaparHtml(item.id)}" data-acao="diminuir">-</button>
+                        <span class="btn btn-outline-secondary disabled">x${item.quantidade}</span>
+                        <button type="button" class="btn btn-outline-secondary quantidade-item" data-id="${escaparHtml(item.id)}" data-acao="aumentar">+</button>
+                    </div>
 
                     <button
                         class="btn btn-sm btn-outline-danger remover-item"
-                        data-id="${item.id}"
+                        data-id="${escaparHtml(item.id)}"
                     >
-                        ✕
+                        Remover
                     </button>
                 </div>
             </div>
@@ -469,8 +723,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnLimparLista = document.getElementById("limparLista");
 
     if (btnLimparLista) {
-        btnLimparLista.addEventListener("click", function () {
-            limparLista();
+        btnLimparLista.addEventListener("click", async function () {
+            const confirmado = await confirmarAcaoLista({
+                titulo: "Limpar lista",
+                texto: "Todos os itens serao removidos da sua lista.",
+                confirmar: "Limpar lista"
+            });
+
+            if (confirmado) {
+                await limparLista();
+            }
         });
     }
 

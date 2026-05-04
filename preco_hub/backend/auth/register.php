@@ -9,7 +9,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 $nome = trim($_POST["nome"] ?? "");
-$email = trim($_POST["email"] ?? "");
+$email = strtolower(trim($_POST["email"] ?? ""));
 $senha = trim($_POST["senha"] ?? "");
 
 if (!$nome || !$email || !$senha) {
@@ -18,6 +18,10 @@ if (!$nome || !$email || !$senha) {
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     jsonResponse(false, "Email inválido", null, 400);
+}
+
+if (strlen($senha) < 6) {
+    jsonResponse(false, "A senha deve ter pelo menos 6 caracteres.", null, 400);
 }
 
 $stmt = $pdo->prepare("SELECT id_usuario FROM usuario WHERE email_usuario = ?");

@@ -98,7 +98,7 @@
                         </div>
 
                         <form id="formAdicionarProduto" enctype="multipart/form-data">
-                            <input type="hidden" id="produtoEditandoId">
+                            <input type="hidden" id="produtoEditandoId" name="id_produto">
 
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -155,6 +155,7 @@
                                         name="imagemProduto"
                                         class="form-control"
                                         accept="image/*">
+                                    <small class="text-muted">JPG, PNG ou WEBP ate 2MB.</small>
                                 </div>
 
                                 <div class="col-12">

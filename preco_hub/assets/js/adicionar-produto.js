@@ -12,8 +12,10 @@ const mercadoPrecoCampos = document.querySelectorAll("input[name='mercadoPreco[]
 const previewImagem = document.getElementById("previewImagem");
 const textoPreview = document.getElementById("textoPreview");
 const botaoSalvarProduto = document.getElementById("botaoSalvarProduto");
+const botaoCancelarEdicao = document.getElementById("botaoCancelarEdicao");
 const mensagemSucesso = document.getElementById("mensagemSucesso");
 const listaProdutosAdicionados = document.getElementById("listaProdutosAdicionados");
+const produtoEditandoId = document.getElementById("produtoEditandoId");
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
@@ -80,6 +82,86 @@ function mostrarMensagem(texto, tipo) {
     }, 3000);
 }
 
+function obterModalConfirmacaoAdmin() {
+    let modal = document.getElementById("modalConfirmacaoAdmin");
+
+    if (modal) {
+        return modal;
+    }
+
+    modal = document.createElement("div");
+    modal.id = "modalConfirmacaoAdmin";
+    modal.className = "modal-lista-confirmacao d-none";
+    modal.innerHTML = `
+        <div class="modal-lista-backdrop" data-modal-fechar="true"></div>
+        <div class="modal-lista-card" role="dialog" aria-modal="true" aria-labelledby="modalAdminTitulo">
+            <div class="modal-lista-icone" aria-hidden="true">!</div>
+            <h2 id="modalAdminTitulo">Confirmar ação</h2>
+            <p id="modalAdminTexto">Tem certeza?</p>
+            <div class="modal-lista-acoes">
+                <button type="button" class="btn btn-outline-secondary" id="modalAdminCancelar">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="modalAdminConfirmar">Confirmar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function confirmarAcaoAdmin(opcoes) {
+    const modal = obterModalConfirmacaoAdmin();
+    const titulo = document.getElementById("modalAdminTitulo");
+    const texto = document.getElementById("modalAdminTexto");
+    const botaoCancelar = document.getElementById("modalAdminCancelar");
+    const botaoConfirmar = document.getElementById("modalAdminConfirmar");
+
+    titulo.textContent = opcoes.titulo || "Confirmar acao";
+    texto.textContent = opcoes.texto || "Tem certeza que deseja continuar?";
+    botaoConfirmar.textContent = opcoes.confirmar || "Confirmar";
+
+    modal.classList.remove("d-none");
+    document.body.classList.add("modal-lista-aberto");
+
+    return new Promise(function (resolve) {
+        function fechar(confirmado) {
+            modal.classList.add("d-none");
+            document.body.classList.remove("modal-lista-aberto");
+            botaoCancelar.removeEventListener("click", cancelar);
+            botaoConfirmar.removeEventListener("click", confirmar);
+            modal.removeEventListener("click", clicarFora);
+            document.removeEventListener("keydown", teclar);
+            resolve(confirmado);
+        }
+
+        function cancelar() {
+            fechar(false);
+        }
+
+        function confirmar() {
+            fechar(true);
+        }
+
+        function clicarFora(event) {
+            if (event.target && event.target.dataset.modalFechar === "true") {
+                fechar(false);
+            }
+        }
+
+        function teclar(event) {
+            if (event.key === "Escape") {
+                fechar(false);
+            }
+        }
+
+        botaoCancelar.addEventListener("click", cancelar);
+        botaoConfirmar.addEventListener("click", confirmar);
+        modal.addEventListener("click", clicarFora);
+        document.addEventListener("keydown", teclar);
+        botaoCancelar.focus();
+    });
+}
+
 function limparFormulario() {
     if (!formAdicionarProduto) return;
 
@@ -88,6 +170,14 @@ function limparFormulario() {
 
     if (botaoSalvarProduto) {
         botaoSalvarProduto.textContent = "Salvar produto";
+    }
+
+    if (produtoEditandoId) {
+        produtoEditandoId.value = "";
+    }
+
+    if (botaoCancelarEdicao) {
+        botaoCancelarEdicao.classList.add("d-none");
     }
 }
 
@@ -115,14 +205,20 @@ function validarFormulario() {
     const categoria = categoriaProduto.value;
     const imagem = imagemProduto.files[0];
     const mercados = obterMercadosFormulario();
+    const editando = produtoEditandoId && produtoEditandoId.value;
 
     if (!nome || !marca || !categoria) {
         mostrarMensagem("Preencha nome, marca e categoria.", "warning");
         return false;
     }
 
-    if (!imagem) {
+    if (!editando && !imagem) {
         mostrarMensagem("Selecione uma imagem para o produto.", "warning");
+        return false;
+    }
+
+    if (imagem && imagem.size > 2 * 1024 * 1024) {
+        mostrarMensagem("A imagem deve ter no maximo 2MB.", "warning");
         return false;
     }
 
@@ -213,22 +309,105 @@ async function renderizarProdutosCadastrados() {
                     <button class="btn btn-sm btn-outline-danger botao-remover" data-id="${produto.id_produto}">
                         Remover
                     </button>
+                    <button class="btn btn-sm btn-outline-primary botao-editar" data-id="${produto.id_produto}">
+                        Editar
+                    </button>
                 </div>
             </div>
         `;
     }).join("");
 
     ativarBotoesRemover();
+    ativarBotoesEditar(produtos);
+}
+
+function ativarBotoesEditar(produtos) {
+    const botoesEditar = document.querySelectorAll(".botao-editar");
+
+    botoesEditar.forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            const id = Number(botao.dataset.id);
+            const produto = produtos.find(function (item) {
+                return Number(item.id_produto) === id;
+            });
+
+            if (produto) {
+                iniciarEdicaoProduto(produto);
+            }
+        });
+    });
+}
+
+function garantirOpcaoSelect(select, valor) {
+    if (!select || !valor) return;
+
+    const existe = Array.from(select.options).some(function (option) {
+        return option.value.toLowerCase() === String(valor).toLowerCase();
+    });
+
+    if (!existe) {
+        const option = document.createElement("option");
+        option.value = valor;
+        option.textContent = valor;
+        select.appendChild(option);
+    }
+}
+
+function iniciarEdicaoProduto(produto) {
+    if (!formAdicionarProduto) return;
+
+    produtoEditandoId.value = produto.id_produto;
+    nomeProduto.value = produto.nome_produto || "";
+    marcaProduto.value = produto.nome_fabricante || "";
+
+    garantirOpcaoSelect(categoriaProduto, produto.nome_categoria);
+    categoriaProduto.value = produto.nome_categoria || "";
+
+    preencherPreview(produto.imagem_produto || "");
+    imagemProduto.value = "";
+
+    const nomes = document.querySelectorAll("input[name='mercadoNome[]']");
+    const precos = document.querySelectorAll("input[name='mercadoPreco[]']");
+    const precosProduto = produto.precos || [];
+
+    nomes.forEach(function (campo, index) {
+        campo.value = precosProduto[index] ? precosProduto[index].mercado : "";
+    });
+
+    precos.forEach(function (campo, index) {
+        campo.value = precosProduto[index] ? precosProduto[index].preco : "";
+    });
+
+    if (botaoSalvarProduto) {
+        botaoSalvarProduto.textContent = "Atualizar produto";
+    }
+
+    if (botaoCancelarEdicao) {
+        botaoCancelarEdicao.classList.remove("d-none");
+    }
+
+    formAdicionarProduto.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function ativarBotoesRemover() {
     const botoesRemover = document.querySelectorAll(".botao-remover");
 
     botoesRemover.forEach(function (botao) {
-        botao.addEventListener("click", function () {
+        botao.addEventListener("click", async function () {
             const id = Number(botao.dataset.id);
-            if (id) {
-                removerProduto(id);
+
+            if (!id) {
+                return;
+            }
+
+            const confirmado = await confirmarAcaoAdmin({
+                titulo: "Remover produto",
+                texto: "Este produto sera removido do cadastro e da lista dos usuarios.",
+                confirmar: "Remover"
+            });
+
+            if (confirmado) {
+                await removerProduto(id);
             }
         });
     });
@@ -306,6 +485,10 @@ if (formAdicionarProduto) {
         event.preventDefault();
         salvarProduto();
     });
+}
+
+if (botaoCancelarEdicao) {
+    botaoCancelarEdicao.addEventListener("click", limparFormulario);
 }
 
 document.addEventListener("DOMContentLoaded", function () {

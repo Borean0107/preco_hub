@@ -70,7 +70,17 @@ function normalizarPrecoImportado($valor)
 
 function obterIdPorNome($pdo, $tabela, $colunaId, $colunaNome, $nome)
 {
-    $stmt = $pdo->prepare("SELECT {$colunaId} FROM {$tabela} WHERE LOWER({$colunaNome}) = LOWER(?)");
+    $permitidos = [
+        "categoria" => ["id_categoria", "nome_categoria"],
+        "fabricante" => ["id_fabricante", "nome_fabricante"],
+        "mercado" => ["id_mercado", "nome_mercado"]
+    ];
+
+    if (!isset($permitidos[$tabela]) || $permitidos[$tabela] !== [$colunaId, $colunaNome]) {
+        throw new InvalidArgumentException("Tabela de apoio invalida.");
+    }
+
+    $stmt = $pdo->prepare("SELECT {$colunaId} FROM {$tabela} WHERE {$colunaNome} = ? LIMIT 1");
     $stmt->execute([$nome]);
     $id = $stmt->fetchColumn();
 
@@ -110,7 +120,7 @@ $erros = 0;
 try {
     $pdo->beginTransaction();
 
-    $stmtProduto = $pdo->prepare("SELECT id_produto FROM produto WHERE LOWER(nome_produto) = LOWER(?) LIMIT 1");
+    $stmtProduto = $pdo->prepare("SELECT id_produto FROM produto WHERE nome_produto = ? LIMIT 1");
     $stmtInserirProduto = $pdo->prepare("
         INSERT INTO produto (
             nome_produto,

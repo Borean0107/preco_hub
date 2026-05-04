@@ -35,6 +35,8 @@ INNER JOIN mercado m ON m.id_mercado = mp.fk_mercado_id_mercado
 WHERE (
     p.nome_produto LIKE :termo
     OR p.descricao_produto LIKE :termo
+    OR f.nome_fabricante LIKE :termo
+    OR c.nome_categoria LIKE :termo
 )
 ";
 
@@ -54,12 +56,12 @@ $sql .= " AND mp.preco_produto_mercado BETWEEN :preco_min AND :preco_max";
 $params[":preco_min"] = $precoMin;
 $params[":preco_max"] = $precoMax;
 
-$sql .= " ORDER BY p.id_produto, mp.preco_produto_mercado ASC";
+$sql .= " ORDER BY p.nome_produto ASC, mp.preco_produto_mercado ASC LIMIT 80";
 
 try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll();
 
     $produtos = [];
 

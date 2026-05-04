@@ -46,8 +46,8 @@ if (registerForm) {
             return;
         }
 
-        if (senha.length < 4) {
-            mostrarMensagemCadastro("warning", "A senha deve ter pelo menos 4 caracteres.");
+        if (senha.length < 6) {
+            mostrarMensagemCadastro("warning", "A senha deve ter pelo menos 6 caracteres.");
             return;
         }
 

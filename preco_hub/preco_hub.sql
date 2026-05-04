@@ -107,7 +107,7 @@ CREATE TABLE `mercado_produto` (
   `fk_mercado_id_mercado` int(11) NOT NULL,
   `fk_produto_id_produto` int(11) NOT NULL,
   `preco_produto_mercado` decimal(10,2) NOT NULL,
-  `data_atualizacao_preco` datetime NOT NULL DEFAULT current_timestamp(),
+  `data_atualizacao_preco` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `disponibilidade_produto` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -249,7 +249,8 @@ ALTER TABLE `mercado`
 --
 ALTER TABLE `mercado_produto`
   ADD PRIMARY KEY (`fk_mercado_id_mercado`,`fk_produto_id_produto`),
-  ADD KEY `fk_mercado_produto_produto` (`fk_produto_id_produto`);
+  ADD KEY `fk_mercado_produto_produto` (`fk_produto_id_produto`),
+  ADD KEY `idx_mercado_produto_produto_preco` (`fk_produto_id_produto`,`preco_produto_mercado`);
 
 --
 -- Índices de tabela `produto`
@@ -257,6 +258,7 @@ ALTER TABLE `mercado_produto`
 ALTER TABLE `produto`
   ADD PRIMARY KEY (`id_produto`),
   ADD UNIQUE KEY `codigo_barras_produto` (`codigo_barras_produto`),
+  ADD UNIQUE KEY `uq_produto_nome` (`nome_produto`),
   ADD KEY `fk_produto_categoria` (`fk_categoria_id_categoria`),
   ADD KEY `fk_produto_fabricante` (`fk_fabricante_id_fabricante`);
 
@@ -272,14 +274,15 @@ ALTER TABLE `usuario`
 --
 ALTER TABLE `lista`
   ADD PRIMARY KEY (`id_lista`),
-  ADD KEY `fk_lista_usuario` (`fk_usuario_id_usuario`);
+  ADD UNIQUE KEY `uq_lista_usuario` (`fk_usuario_id_usuario`);
 
 --
 -- Indices de tabela `lista_produto`
 --
 ALTER TABLE `lista_produto`
   ADD PRIMARY KEY (`fk_lista_id_lista`,`fk_produto_id_produto`),
-  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`);
+  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`),
+  ADD CONSTRAINT `chk_lista_produto_quantidade` CHECK (`quantidade` > 0);
 
 --
 -- AUTO_INCREMENT para tabelas despejadas
@@ -313,7 +316,7 @@ ALTER TABLE `produto`
 -- AUTO_INCREMENT de tabela `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de tabela `lista`

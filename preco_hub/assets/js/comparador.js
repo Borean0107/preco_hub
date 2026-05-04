@@ -1,5 +1,5 @@
 const API_LISTAR = "backend/produtos/listar.php";
-const STORAGE_LISTA = "listaProdutos";
+const API_LISTA_LISTAR = "backend/listas/listar.php";
 
 let produtosGlobal = [];
 let graficoPrecos, graficoEconomia, graficoDistribuicao;
@@ -51,15 +51,28 @@ function normalizarTexto(texto) {
         .trim();
 }
 
-function lerListaComparacao() {
+async function lerListaComparacao() {
     try {
-        const dados = localStorage.getItem(STORAGE_LISTA);
-        const lista = dados ? JSON.parse(dados) : [];
+        const response = await fetch(API_LISTA_LISTAR, {
+            credentials: "include",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+        const dados = await response.json();
 
-        return Array.isArray(lista) ? lista : [];
+        if (response.status === 401) {
+            throw new Error("Entre na sua conta para ver o comparador.");
+        }
+
+        if (!response.ok || !dados.success || !Array.isArray(dados.data)) {
+            throw new Error(dados.message || "Nao foi possivel carregar a lista.");
+        }
+
+        return dados.data;
     } catch (erro) {
         console.error("Erro ao ler a lista de compras:", erro);
-        return [];
+        throw erro;
     }
 }
 
@@ -67,20 +80,20 @@ function filtrarProdutosDaLista(produtos, lista) {
     const ordemProdutos = new Map();
 
     lista.forEach(function (item) {
-        const nome = normalizarTexto(item.nome);
+        const idProduto = Number(item.id_produto);
 
-        if (nome && !ordemProdutos.has(nome)) {
-            ordemProdutos.set(nome, ordemProdutos.size);
+        if (idProduto && !ordemProdutos.has(idProduto)) {
+            ordemProdutos.set(idProduto, ordemProdutos.size);
         }
     });
 
     return produtos
         .filter(function (produto) {
-            return ordemProdutos.has(normalizarTexto(produto.nome_produto));
+            return ordemProdutos.has(Number(produto.id_produto));
         })
         .sort(function (a, b) {
-            return ordemProdutos.get(normalizarTexto(a.nome_produto)) -
-                ordemProdutos.get(normalizarTexto(b.nome_produto));
+            return ordemProdutos.get(Number(a.id_produto)) -
+                ordemProdutos.get(Number(b.id_produto));
         });
 }
 
@@ -387,7 +400,7 @@ function criarOpcoesGraficoDistribuicao() {
 
 async function carregarProdutos() {
     try {
-        const lista = lerListaComparacao();
+        const lista = await lerListaComparacao();
 
         if (lista.length === 0) {
             produtosGlobal = [];
@@ -423,7 +436,7 @@ async function carregarProdutos() {
     } catch (erro) {
         console.error("Erro:", erro);
         mostrarMensagem(
-            '<strong>Erro ao carregar os dados do comparador.</strong> Tente atualizar a pagina ou conferir a conexao com o banco.',
+            '<strong>Erro ao carregar os dados do comparador.</strong> ' + escaparHtml(erro.message || "Tente atualizar a pagina ou conferir a conexao com o banco."),
             "danger"
         );
     }

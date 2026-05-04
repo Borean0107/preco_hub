@@ -1,9 +1,24 @@
 (function () {
     var STORAGE_USUARIO_LOGADO = "usuarioLogado";
     var ADMIN_EMAIL = "admin@gmail.com";
+    var API_TROCAR_SENHA = "backend/auth/trocar-senha.php";
 
     function obterElemento(id) {
         return document.getElementById(id);
+    }
+
+    function formatarData(valor) {
+        if (!valor) {
+            return "-";
+        }
+
+        var data = new Date(String(valor).replace(" ", "T"));
+
+        if (isNaN(data.getTime())) {
+            return "-";
+        }
+
+        return data.toLocaleDateString("pt-BR");
     }
 
     function usuarioEhAdmin(usuario) {
@@ -130,6 +145,9 @@
     }
 
     function preencherPerfil(usuario) {
+        garantirPerfilCompleto();
+        atualizarContadorLista(usuario.total_itens_lista || 0);
+
         var nome = usuario.nome || "Usuario";
         var email = usuario.email || "Email nao informado";
         var primeiroNome = nome.split(" ")[0] || "Perfil";
@@ -140,7 +158,9 @@
             perfilNomeCurto: primeiroNome,
             perfilNomeTopo: nome,
             perfilNome: nome,
-            perfilEmail: email
+            perfilEmail: email,
+            perfilDataCriacao: formatarData(usuario.data_criacao),
+            perfilTotalItens: String(usuario.total_itens_lista || 0)
         };
 
         Object.keys(campos).forEach(function (id) {
@@ -150,6 +170,62 @@
                 elemento.textContent = campos[id];
             }
         });
+    }
+
+    function atualizarContadorLista(total) {
+        var linkLista = Array.from(document.querySelectorAll(".navbar-nav a")).find(function (link) {
+            return (link.getAttribute("href") || "").includes("lista.html");
+        });
+
+        if (!linkLista) {
+            return;
+        }
+
+        var badge = linkLista.querySelector(".contador-lista-nav");
+
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "contador-lista-nav badge bg-caramelo text-dark ms-2";
+            linkLista.appendChild(badge);
+        }
+
+        badge.textContent = String(total);
+        badge.classList.toggle("d-none", Number(total) <= 0);
+    }
+
+    function garantirPerfilCompleto() {
+        var caixaPerfil = obterElemento("caixaPerfil");
+        var botaoSair = obterElemento("botaoSair");
+
+        if (!caixaPerfil || !botaoSair || obterElemento("perfilDataCriacao")) {
+            return;
+        }
+
+        var complemento = document.createElement("div");
+        complemento.innerHTML = `
+            <div class="perfil-info">
+                <span>Conta criada em</span>
+                <strong id="perfilDataCriacao">-</strong>
+            </div>
+
+            <div class="perfil-info">
+                <span>Itens na lista</span>
+                <strong id="perfilTotalItens">0</strong>
+            </div>
+
+            <button class="btn btn-outline-secondary w-100 mt-3" id="botaoTrocarSenha" type="button">
+                Trocar senha
+            </button>
+
+            <form id="formTrocarSenha" class="perfil-senha-form d-none mt-3">
+                <input type="password" class="form-control mb-2" id="senhaAtualPerfil" placeholder="Senha atual" required>
+                <input type="password" class="form-control mb-2" id="novaSenhaPerfil" placeholder="Nova senha" minlength="4" required>
+                <button class="btn btn-laranja w-100" type="submit">Salvar senha</button>
+                <small class="d-block mt-2 text-muted" id="mensagemSenhaPerfil"></small>
+            </form>
+        `;
+
+        caixaPerfil.insertBefore(complemento, botaoSair);
     }
 
     function controlarAbasAdmin(usuario) {
@@ -208,6 +284,7 @@
         controlarAbasAdmin(usuario);
         controlarAtalhoAdmin(usuario);
         localStorage.setItem(STORAGE_USUARIO_LOGADO, JSON.stringify(usuario));
+        registrarEventos();
 
         if (botaoEntrar) {
             botaoEntrar.classList.add("d-none");
@@ -232,6 +309,57 @@
         }
 
         return data.data;
+    }
+
+    async function atualizarPerfilDaSessao() {
+        try {
+            var usuario = await buscarUsuarioDaSessao();
+
+            if (usuario) {
+                mostrarPerfil(usuario);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function enviarTrocaSenha(event) {
+        event.preventDefault();
+
+        var senhaAtual = obterElemento("senhaAtualPerfil");
+        var novaSenha = obterElemento("novaSenhaPerfil");
+        var mensagem = obterElemento("mensagemSenhaPerfil");
+
+        if (!senhaAtual || !novaSenha || !mensagem) {
+            return;
+        }
+
+        mensagem.textContent = "Salvando...";
+
+        try {
+            var response = await fetch(API_TROCAR_SENHA, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Accept": "application/json"
+                },
+                body: new URLSearchParams({
+                    senha_atual: senhaAtual.value,
+                    nova_senha: novaSenha.value
+                })
+            });
+            var data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Nao foi possivel trocar a senha.");
+            }
+
+            senhaAtual.value = "";
+            novaSenha.value = "";
+            mensagem.textContent = data.message || "Senha alterada com sucesso.";
+        } catch (error) {
+            mensagem.textContent = error.message;
+        }
     }
 
     async function sairDaConta() {
@@ -259,6 +387,8 @@
         var botaoPerfil = obterElemento("botaoPerfil");
         var caixaPerfil = obterElemento("caixaPerfil");
         var botaoSair = obterElemento("botaoSair");
+        var botaoTrocarSenha = obterElemento("botaoTrocarSenha");
+        var formTrocarSenha = obterElemento("formTrocarSenha");
 
         if (botaoPerfil && !botaoPerfil.dataset.perfilEvento) {
             botaoPerfil.dataset.perfilEvento = "true";
@@ -278,6 +408,20 @@
         if (botaoSair && !botaoSair.dataset.perfilEvento) {
             botaoSair.dataset.perfilEvento = "true";
             botaoSair.addEventListener("click", sairDaConta);
+        }
+
+        if (botaoTrocarSenha && !botaoTrocarSenha.dataset.perfilEvento) {
+            botaoTrocarSenha.dataset.perfilEvento = "true";
+            botaoTrocarSenha.addEventListener("click", function () {
+                if (formTrocarSenha) {
+                    formTrocarSenha.classList.toggle("d-none");
+                }
+            });
+        }
+
+        if (formTrocarSenha && !formTrocarSenha.dataset.perfilEvento) {
+            formTrocarSenha.dataset.perfilEvento = "true";
+            formTrocarSenha.addEventListener("submit", enviarTrocaSenha);
         }
 
         if (!document.body.dataset.perfilEventosGlobais) {
@@ -334,4 +478,5 @@
     };
 
     document.addEventListener("DOMContentLoaded", ativarPerfil);
+    window.addEventListener("precohub:lista-atualizada", atualizarPerfilDaSessao);
 })();

@@ -8,14 +8,14 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     jsonResponse(false, "Método não permitido.", null, 405);
 }
 
-$email = trim($_POST["email"] ?? "");
+$email = strtolower(trim($_POST["email"] ?? ""));
 $senha = trim($_POST["senha"] ?? "");
 
 if (!$email || !$senha) {
     jsonResponse(false, "Preencha email e senha.", null, 400);
 }
 
-$stmt = $pdo->prepare("SELECT * FROM usuario WHERE email_usuario = ?");
+$stmt = $pdo->prepare("SELECT id_usuario, nome_usuario, email_usuario, senha_usuario FROM usuario WHERE email_usuario = ? LIMIT 1");
 $stmt->execute([$email]);
 
 $usuario = $stmt->fetch(PDO::FETCH_ASSOC);

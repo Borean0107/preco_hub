@@ -238,6 +238,11 @@ main {
     word-break: break-word;
 }
 
+.perfil-senha-form {
+    padding-top: 12px;
+    border-top: 1px solid var(--borda);
+}
+
 /* ================= HERO ================= */
 
 .hero-profissional {
@@ -483,6 +488,73 @@ main {
 
 .item-lista:last-child {
     border-bottom: none;
+}
+
+.lista-item-acoes .btn-group .btn {
+    min-width: 38px;
+}
+
+.modal-lista-aberto {
+    overflow: hidden;
+}
+
+.modal-lista-confirmacao {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-lista-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.52);
+}
+
+.modal-lista-card {
+    position: relative;
+    width: min(100%, 420px);
+    padding: 26px;
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+    background-color: var(--branco);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    text-align: center;
+}
+
+.modal-lista-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background-color: rgba(220, 38, 38, 0.10);
+    color: #DC2626;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+
+.modal-lista-card h2 {
+    margin-bottom: 8px;
+    color: var(--texto);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.modal-lista-card p {
+    margin-bottom: 22px;
+    color: #64748B;
+}
+
+.modal-lista-acoes {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
 }
 
 .form-check-input:checked {
@@ -1222,6 +1294,41 @@ footer {
 }
 
 @media (max-width: 576px) {
+    main.container {
+        margin-top: 24px !important;
+        margin-bottom: 24px !important;
+    }
+
+    .item-lista {
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .item-lista .form-check,
+    .lista-item-acoes {
+        width: 100%;
+    }
+
+    .lista-item-acoes {
+        justify-content: space-between;
+    }
+
+    .lista-item-acoes .btn-group {
+        flex: 1 1 130px;
+    }
+
+    .modal-lista-card {
+        padding: 22px;
+    }
+
+    .modal-lista-acoes {
+        flex-direction: column-reverse;
+    }
+
+    .modal-lista-acoes .btn {
+        width: 100%;
+    }
+
     body[data-site="usuario"] .site-toast-container {
         right: 16px;
         bottom: 16px;

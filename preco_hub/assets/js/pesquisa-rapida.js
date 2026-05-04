@@ -1,6 +1,6 @@
 (function () {
     const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
-    const STORAGE_LISTA = "listaProdutos";
+    const API_ADICIONAR_LISTA = "backend/listas/adicionar.php";
 
     let produtosCache = null;
 
@@ -27,21 +27,6 @@
             style: "currency",
             currency: "BRL"
         });
-    }
-
-    function lerListaCompras() {
-        try {
-            const dados = localStorage.getItem(STORAGE_LISTA);
-            const lista = dados ? JSON.parse(dados) : [];
-
-            return Array.isArray(lista) ? lista : [];
-        } catch (error) {
-            return [];
-        }
-    }
-
-    function salvarListaCompras(lista) {
-        localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
     }
 
     function mostrarAvisoSite(titulo, texto, tipo) {
@@ -144,6 +129,7 @@
                 <button
                     type="button"
                     class="btn btn-sm btn-laranja busca-rapida-adicionar"
+                    data-id="${produto.id_produto || ""}"
                     data-nome="${nomeSeguro}"
                     data-preco="${melhorPreco ? melhorPreco.preco : 0}"
                     data-mercado="${melhorPreco ? escaparHtml(melhorPreco.mercado) : ""}"
@@ -207,27 +193,55 @@
         }
     }
 
-    function adicionarNaLista(botao) {
+    async function adicionarNaLista(botao) {
+        const idProduto = botao.dataset.id || "";
         const nome = botao.dataset.nome || "";
-        const preco = Number(botao.dataset.preco || 0);
-        const mercado = botao.dataset.mercado || "";
 
-        if (!nome || !preco || !mercado) {
+        if (!idProduto || !nome) {
             return;
         }
 
-        const lista = lerListaCompras();
+        const textoOriginal = botao.textContent;
+        botao.disabled = true;
+        botao.textContent = "Adicionando...";
 
-        lista.push({
-            id: Date.now(),
-            nome: nome,
-            preco: preco,
-            mercado: mercado,
-            comprado: false
-        });
+        try {
+            const response = await fetch(API_ADICIONAR_LISTA, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Accept": "application/json"
+                },
+                body: new URLSearchParams({ id_produto: idProduto })
+            });
+            const dados = await response.json();
 
-        salvarListaCompras(lista);
-        mostrarAvisoSite("Produto adicionado", nome + " foi adicionado a sua lista.");
+            if (response.status === 401) {
+                throw new Error("Entre na sua conta para salvar produtos na lista.");
+            }
+
+            if (!response.ok || !dados.success) {
+                throw new Error(dados.message || "Nao foi possivel adicionar o produto.");
+            }
+
+            botao.textContent = "Adicionado";
+            botao.classList.remove("btn-laranja");
+            botao.classList.add("btn-success");
+            window.dispatchEvent(new CustomEvent("precohub:lista-atualizada"));
+            mostrarAvisoSite("Produto adicionado", nome + " foi adicionado a sua lista.");
+        } catch (error) {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+            mostrarAvisoSite("Lista nao atualizada", error.message, "warning");
+            return;
+        }
+
+        window.setTimeout(function () {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+            botao.classList.remove("btn-success");
+            botao.classList.add("btn-laranja");
+        }, 1400);
     }
 
     function abrirPesquisa() {

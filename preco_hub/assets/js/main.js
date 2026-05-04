@@ -1,6 +1,6 @@
 const STORAGE_PRODUTOS = "produtosCadastrados";
-const STORAGE_LISTA = "listaProdutos";
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
+const API_ADICIONAR_LISTA = "backend/listas/adicionar.php";
 
 function escaparHtml(valor) {
     return String(valor)
@@ -30,11 +30,6 @@ function lerProdutosCadastrados() {
     return dados ? JSON.parse(dados) : [];
 }
 
-function lerListaCompras() {
-    const dados = localStorage.getItem(STORAGE_LISTA);
-    return dados ? JSON.parse(dados) : [];
-}
-
 async function buscarProdutosDoBackend() {
     try {
         const response = await fetch(API_LISTAR_PRODUTOS, {
@@ -54,6 +49,7 @@ async function buscarProdutosDoBackend() {
 
         return data.data.map(function (produto) {
             return {
+                id_produto: produto.id_produto,
                 nome: produto.nome_produto,
                 imagem: produto.imagem_produto,
                 precos: produto.precos || []
@@ -63,10 +59,6 @@ async function buscarProdutosDoBackend() {
         console.error(error);
         return [];
     }
-}
-
-function salvarListaCompras(lista) {
-    localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
 }
 
 function mostrarAvisoSite(titulo, texto, tipo) {
@@ -104,21 +96,65 @@ function mostrarAvisoSite(titulo, texto, tipo) {
     }, 3000);
 }
 
-function adicionarProdutoNaLista(nome, preco, mercado) {
-    const lista = lerListaCompras();
+async function adicionarProdutoNaLista(idProduto, nome, botao) {
+    if (!idProduto) {
+        mostrarAvisoSite("Produto indisponivel", "Nao foi possivel identificar este produto.", "warning");
+        return;
+    }
 
-    const novoItem = {
-        id: Date.now(),
-        nome: nome,
-        preco: Number(preco),
-        mercado: mercado,
-        comprado: false
-    };
+    const textoOriginal = botao ? botao.textContent : "";
 
-    lista.push(novoItem);
-    salvarListaCompras(lista);
+    if (botao) {
+        botao.disabled = true;
+        botao.textContent = "Adicionando...";
+    }
 
-    mostrarAvisoSite("Produto adicionado", nome + " foi adicionado a sua lista.");
+    try {
+        const response = await fetch(API_ADICIONAR_LISTA, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Accept": "application/json"
+            },
+            body: new URLSearchParams({ id_produto: idProduto })
+        });
+        const data = await response.json();
+
+        if (response.status === 401) {
+            throw new Error("Entre na sua conta para salvar produtos na lista.");
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Nao foi possivel adicionar o produto.");
+        }
+
+        if (botao) {
+            botao.textContent = "Adicionado";
+            botao.classList.remove("btn-laranja");
+            botao.classList.add("btn-success");
+        }
+
+        window.dispatchEvent(new CustomEvent("precohub:lista-atualizada"));
+        mostrarAvisoSite("Produto adicionado", nome + " foi adicionado a sua lista.");
+    } catch (error) {
+        mostrarAvisoSite("Lista nao atualizada", error.message, "warning");
+
+        if (botao) {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+        }
+
+        return;
+    }
+
+    if (botao) {
+        window.setTimeout(function () {
+            botao.disabled = false;
+            botao.textContent = textoOriginal;
+            botao.classList.remove("btn-success");
+            botao.classList.add("btn-laranja");
+        }, 1400);
+    }
 }
 
 function ordenarPrecosDosCards() {
@@ -175,12 +211,17 @@ function ativarBotoesAdicionar() {
     const botoes = document.querySelectorAll(".adicionar-lista");
 
     botoes.forEach(function (botao) {
-        botao.addEventListener("click", function () {
-            const nome = botao.dataset.nome || "";
-            const preco = botao.dataset.preco || "0";
-            const mercado = botao.dataset.mercado || "";
+        if (document.body && document.body.dataset.adminPage === "true") {
+            botao.disabled = true;
+            botao.textContent = "Somente leitura";
+            return;
+        }
 
-            adicionarProdutoNaLista(nome, preco, mercado);
+        botao.addEventListener("click", function () {
+            const idProduto = botao.dataset.id || "";
+            const nome = botao.dataset.nome || "";
+
+            adicionarProdutoNaLista(idProduto, nome, botao);
         });
     });
 }
@@ -273,6 +314,7 @@ function criarCardProduto(produto) {
 
                 <button
                     class="btn btn-laranja w-100 mt-3 adicionar-lista"
+                    data-id="${produto.id_produto || ""}"
                     data-nome="${nomeSeguro}"
                     data-preco="${temPrecos ? melhorPreco.preco : 0}"
                     data-mercado="${temPrecos ? escaparHtml(melhorPreco.mercado || "") : ""}"

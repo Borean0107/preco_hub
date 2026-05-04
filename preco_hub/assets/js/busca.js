@@ -1,6 +1,6 @@
 const API_BUSCAR = "backend/produtos/buscar.php";
 const API_LISTAR = "backend/produtos/listar.php";
-const STORAGE_LISTA = "listaProdutos";
+const API_ADICIONAR_LISTA = "backend/listas/adicionar.php";
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
@@ -16,15 +16,6 @@ function escaparHtml(valor) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
-
-function lerListaCompras() {
-    const dados = localStorage.getItem(STORAGE_LISTA);
-    return dados ? JSON.parse(dados) : [];
-}
-
-function salvarListaCompras(lista) {
-    localStorage.setItem(STORAGE_LISTA, JSON.stringify(lista));
 }
 
 function mostrarAvisoSite(titulo, texto, tipo) {
@@ -112,18 +103,36 @@ async function carregarMercados() {
     }
 }
 
-function adicionarNaLista(nomeProduto, preco, mercado) {
-    const lista = lerListaCompras();
-    const novoItem = {
-        id: Date.now(),
-        nome: nomeProduto,
-        preco: Number(preco),
-        mercado: mercado,
-        comprado: false
-    };
-    lista.push(novoItem);
-    salvarListaCompras(lista);
-    mostrarAvisoSite("Produto adicionado", nomeProduto + " foi adicionado a sua lista.");
+async function adicionarNaLista(idProduto, nomeProduto) {
+    if (!idProduto) {
+        mostrarAvisoSite("Produto indisponivel", "Nao foi possivel identificar este produto.", "warning");
+        return;
+    }
+
+    try {
+        const response = await fetch(API_ADICIONAR_LISTA, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Accept": "application/json"
+            },
+            body: new URLSearchParams({ id_produto: idProduto })
+        });
+        const data = await response.json();
+
+        if (response.status === 401) {
+            throw new Error("Entre na sua conta para salvar produtos na lista.");
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Nao foi possivel adicionar o produto.");
+        }
+
+        window.dispatchEvent(new CustomEvent("precohub:lista-atualizada"));
+        mostrarAvisoSite("Produto adicionado", nomeProduto + " foi adicionado a sua lista.");
+    } catch (error) {
+        mostrarAvisoSite("Lista nao atualizada", error.message, "warning");
+    }
 }
 
 function obterMelhorPreco(precos) {
@@ -222,7 +231,7 @@ async function realizarBusca() {
 
 function exibirResultados(produtos) {
     const container = document.getElementById("containerResultados");
-    container.innerHTML = "";
+    const cards = [];
 
     produtos.forEach(function (produto) {
         const precos = normalizarPrecos(produto.precos);
@@ -252,7 +261,10 @@ function exibirResultados(produtos) {
                         ${badge}
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-primary w-100 mb-2" onclick="adicionarNaLista('${escaparHtml(produto.nome_produto)}', ${p.preco}, '${escaparHtml(p.mercado)}')">
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary w-100 mb-2 busca-adicionar-lista"
+                    data-id="${Number(produto.id_produto)}">
                     + Adicionar à lista
                 </button>
             `;
@@ -294,7 +306,10 @@ function exibirResultados(produtos) {
                             ${htmlPrecos}
                         </div>
 
-                        <button class="btn btn-primary w-100 mt-3" onclick="abrirModal('modal-${produto.id_produto}')">
+                        <button
+                            type="button"
+                            class="btn btn-primary w-100 mt-3 abrir-modal-busca"
+                            data-modal="modal-${produto.id_produto}">
                             👁️ Ver todos os preços
                         </button>
                     </div>
@@ -304,15 +319,17 @@ function exibirResultados(produtos) {
             <!-- Modal com todos os preços -->
             <div id="modal-${produto.id_produto}" class="modal-comparador" style="display: none;">
                 <div class="modal-content-comparador">
-                    <span class="close-modal" onclick="fecharModal('modal-${produto.id_produto}')">&times;</span>
+                    <button type="button" class="close-modal fechar-modal-busca" data-modal="modal-${produto.id_produto}" aria-label="Fechar">&times;</button>
                     <h5 class="fw-bold mb-4">${escaparHtml(produto.nome_produto)}</h5>
                     ${htmlPrecos}
                 </div>
             </div>
         `;
 
-        container.innerHTML += card;
+        cards.push(card);
     });
+
+    container.innerHTML = cards.join("");
 
     if (!document.getElementById("estilosBuscaComparador")) {
         const style = document.createElement("style");
@@ -383,6 +400,37 @@ document.addEventListener('click', function(event) {
     }
 });
 
+function registrarEventosResultadosBusca() {
+    const container = document.getElementById("containerResultados");
+
+    if (!container) {
+        return;
+    }
+
+    container.addEventListener("click", function (event) {
+        const botaoAdicionar = event.target.closest(".busca-adicionar-lista");
+        const botaoAbrirModal = event.target.closest(".abrir-modal-busca");
+        const botaoFecharModal = event.target.closest(".fechar-modal-busca");
+
+        if (botaoAdicionar) {
+            const card = botaoAdicionar.closest(".produto-card");
+            const titulo = card ? card.querySelector("h6") : null;
+            const nome = titulo ? titulo.textContent.trim() : "";
+            adicionarNaLista(Number(botaoAdicionar.dataset.id), nome);
+            return;
+        }
+
+        if (botaoAbrirModal) {
+            abrirModal(botaoAbrirModal.dataset.modal);
+            return;
+        }
+
+        if (botaoFecharModal) {
+            fecharModal(botaoFecharModal.dataset.modal);
+        }
+    });
+}
+
 function limparFiltros() {
     document.getElementById("termoBusca").value = "";
     document.getElementById("filtroCategoria").value = "";
@@ -396,6 +444,7 @@ function limparFiltros() {
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
     carregarMercados();
+    registrarEventosResultadosBusca();
     document.getElementById("btnBuscar").addEventListener("click", realizarBusca);
     document.getElementById("btnLimparFiltros").addEventListener("click", limparFiltros);
     document.getElementById("termoBusca").addEventListener("keypress", function (e) {
