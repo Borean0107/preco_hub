@@ -29,7 +29,7 @@ function usuarioEhAdmin(usuario) {
 }
 
 function redirecionarUsuarioLogado(usuario) {
-    window.location.href = usuarioEhAdmin(usuario) ? "adicionar-produto.html" : "index.html";
+    window.location.href = usuarioEhAdmin(usuario) ? "adicionar-produto.html" : "home.html";
 }
 
 fetch("backend/auth/me.php", {
