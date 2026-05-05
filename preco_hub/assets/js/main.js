@@ -25,6 +25,50 @@ function formatarPreco(valor) {
     });
 }
 
+function obterDataAtualizacao(valor) {
+    if (!valor) {
+        return null;
+    }
+
+    const partes = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (!partes) {
+        return null;
+    }
+
+    return {
+        original: valor,
+        timestamp: Number(partes[1] + partes[2] + partes[3]),
+        formatada: partes[3] + "/" + partes[2] + "/" + partes[1]
+    };
+}
+
+function atualizarDataProdutos(produtos) {
+    const badge = document.getElementById("dataAtualizacaoProdutos");
+
+    if (!badge || !Array.isArray(produtos)) {
+        return;
+    }
+
+    const dataMaisRecente = produtos.reduce(function (maisRecente, produto) {
+        const dataProduto = obterDataAtualizacao(produto.data_atualizacao_produto);
+
+        if (!dataProduto) {
+            return maisRecente;
+        }
+
+        if (!maisRecente || dataProduto.timestamp > maisRecente.timestamp) {
+            return dataProduto;
+        }
+
+        return maisRecente;
+    }, null);
+
+    if (dataMaisRecente) {
+        badge.textContent = "Atualizado dia: " + dataMaisRecente.formatada;
+    }
+}
+
 function lerProdutosCadastrados() {
     const dados = localStorage.getItem(STORAGE_PRODUTOS);
     return dados ? JSON.parse(dados) : [];
@@ -33,6 +77,7 @@ function lerProdutosCadastrados() {
 async function buscarProdutosDoBackend() {
     try {
         const response = await fetch(API_LISTAR_PRODUTOS, {
+            cache: "no-store",
             headers: {
                 "Accept": "application/json"
             }
@@ -52,6 +97,7 @@ async function buscarProdutosDoBackend() {
                 id_produto: produto.id_produto,
                 nome: produto.nome_produto,
                 imagem: produto.imagem_produto,
+                data_atualizacao_produto: produto.data_atualizacao_produto,
                 precos: produto.precos || []
             };
         });
@@ -59,6 +105,13 @@ async function buscarProdutosDoBackend() {
         console.error(error);
         return [];
     }
+}
+
+async function atualizarBadgeDataProdutos() {
+    const produtosBackend = await buscarProdutosDoBackend();
+    atualizarDataProdutos(produtosBackend);
+
+    return produtosBackend;
 }
 
 function mostrarAvisoSite(titulo, texto, tipo) {
@@ -346,7 +399,7 @@ async function renderizarProdutosDoLocalStorage() {
         return;
     }
 
-    const produtosBackend = await buscarProdutosDoBackend();
+    const produtosBackend = await atualizarBadgeDataProdutos();
     const produtosLocal = lerProdutosCadastrados();
     const nomesFixos = obterNomesDosProdutosFixos();
     const nomesJaRenderizados = new Set(nomesFixos);
@@ -382,4 +435,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     ordenarPrecosDosCards();
     ativarBotoesAdicionar();
     ativarBusca();
+});
+
+window.addEventListener("focus", function () {
+    atualizarBadgeDataProdutos();
 });

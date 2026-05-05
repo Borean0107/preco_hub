@@ -2,6 +2,9 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+
 $sql = "
     SELECT
         p.id_produto,
@@ -12,6 +15,7 @@ $sql = "
         c.nome_categoria,
         m.nome_mercado,
         mp.preco_produto_mercado,
+        mp.data_atualizacao_preco,
         mp.disponibilidade_produto
     FROM produto p
     LEFT JOIN fabricante f
@@ -41,14 +45,26 @@ foreach ($rows as $row) {
             "imagem_produto" => $row["imagem_produto"],
             "nome_fabricante" => $row["nome_fabricante"],
             "nome_categoria" => $row["nome_categoria"],
+            "data_atualizacao_produto" => null,
             "precos" => []
         ];
     }
 
     if ($row["nome_mercado"] !== null) {
+        if (
+            $row["data_atualizacao_preco"] !== null
+            && (
+                $produtos[$id]["data_atualizacao_produto"] === null
+                || $row["data_atualizacao_preco"] > $produtos[$id]["data_atualizacao_produto"]
+            )
+        ) {
+            $produtos[$id]["data_atualizacao_produto"] = $row["data_atualizacao_preco"];
+        }
+
         $produtos[$id]["precos"][] = [
             "mercado" => $row["nome_mercado"],
             "preco" => (float) $row["preco_produto_mercado"],
+            "data_atualizacao" => $row["data_atualizacao_preco"],
             "disponibilidade" => (bool) $row["disponibilidade_produto"]
         ];
     }
