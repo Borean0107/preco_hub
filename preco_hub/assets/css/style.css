@@ -33,6 +33,10 @@ body {
     flex-direction: column;
 }
 
+footer {
+    display: none !important;
+}
+
 body.login-body {
     min-height: 100vh;
     display: flex;
@@ -1485,14 +1489,6 @@ body[data-site="usuario"] .site-toast-danger {
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* ================= FOOTER ================= */
-
-footer {
-    margin-top: 60px;
-    background-color: var(--azul) !important;
-    color: white;
 }
 
 /* ================= RESPONSIVIDADE ================= */
