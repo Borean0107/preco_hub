@@ -285,7 +285,12 @@
 
                 <div class="card shadow-sm mt-4">
                     <div class="card-body p-4">
-                        <h2 class="h5 text-marrom fw-bold mb-3">Produtos cadastrados</h2>
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+                            <h2 class="h5 text-marrom fw-bold mb-0">Produtos cadastrados</h2>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="botaoRemoverTodosProdutos">
+                                Remover todos
+                            </button>
+                        </div>
                         <div id="listaProdutosAdicionados" class="produtos-adicionados-vazio text-muted">
                             Nenhum produto cadastrado nesta tela ainda.
                         </div>
@@ -298,7 +303,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/perfil.js?v=20260507-transicoes4"></script>
-    <script src="assets/js/adicionar-produto.js?v=20260507-opt1"></script>
+    <script src="assets/js/adicionar-produto.js?v=20260507-remover-todos"></script>
 </body>
 
 </html>

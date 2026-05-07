@@ -1,5 +1,6 @@
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
 const API_SALVAR_PRODUTO = "backend/produtos/salvar.php";
+const API_REMOVER_TODOS_PRODUTOS = "backend/produtos/remover-todos.php";
 
 const formAdicionarProduto = document.getElementById("formAdicionarProduto");
 const nomeProduto = document.getElementById("nomeProduto");
@@ -16,6 +17,7 @@ const botaoCancelarEdicao = document.getElementById("botaoCancelarEdicao");
 const mensagemSucesso = document.getElementById("mensagemSucesso");
 const listaProdutosAdicionados = document.getElementById("listaProdutosAdicionados");
 const produtoEditandoId = document.getElementById("produtoEditandoId");
+const botaoRemoverTodosProdutos = document.getElementById("botaoRemoverTodosProdutos");
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
@@ -267,7 +269,14 @@ async function renderizarProdutosCadastrados() {
     if (!produtos || produtos.length === 0) {
         listaProdutosAdicionados.className = "produtos-adicionados-vazio text-muted";
         listaProdutosAdicionados.innerHTML = "Nenhum produto cadastrado nesta tela ainda.";
+        if (botaoRemoverTodosProdutos) {
+            botaoRemoverTodosProdutos.disabled = true;
+        }
         return;
+    }
+
+    if (botaoRemoverTodosProdutos) {
+        botaoRemoverTodosProdutos.disabled = false;
     }
 
     listaProdutosAdicionados.className = "";
@@ -436,6 +445,47 @@ async function removerProduto(idProduto) {
     }
 }
 
+async function removerTodosProdutos() {
+    const confirmado = await confirmarAcaoAdmin({
+        titulo: "Remover todos os produtos",
+        texto: "Todos os produtos, preços e itens salvos nas listas dos usuários serão removidos. Esta ação não pode ser desfeita.",
+        confirmar: "Remover todos"
+    });
+
+    if (!confirmado) {
+        return;
+    }
+
+    if (botaoRemoverTodosProdutos) {
+        botaoRemoverTodosProdutos.disabled = true;
+    }
+
+    try {
+        const response = await fetch(API_REMOVER_TODOS_PRODUTOS, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        const data = await lerJsonSeguro(response);
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Erro ao remover produtos.");
+        }
+
+        limparFormulario();
+        mostrarMensagem(data.message || "Produtos removidos com sucesso.", "success");
+        await renderizarProdutosCadastrados();
+    } catch (error) {
+        mostrarMensagem(error.message, "danger");
+
+        if (botaoRemoverTodosProdutos) {
+            botaoRemoverTodosProdutos.disabled = false;
+        }
+    }
+}
+
 async function salvarProduto() {
     if (!validarFormulario()) {
         return;
@@ -489,6 +539,10 @@ if (formAdicionarProduto) {
 
 if (botaoCancelarEdicao) {
     botaoCancelarEdicao.addEventListener("click", limparFormulario);
+}
+
+if (botaoRemoverTodosProdutos) {
+    botaoRemoverTodosProdutos.addEventListener("click", removerTodosProdutos);
 }
 
 document.addEventListener("DOMContentLoaded", function () {

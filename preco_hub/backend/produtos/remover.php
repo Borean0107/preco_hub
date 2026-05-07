@@ -13,6 +13,30 @@ if ($idProduto === false || $idProduto <= 0) {
     jsonResponse(false, "ID de produto inválido.", null, 400);
 }
 
+function removerImagemProdutoLocal($caminhoRelativo)
+{
+    $caminhoRelativo = str_replace("\\", "/", (string) $caminhoRelativo);
+
+    if (strpos($caminhoRelativo, "assets/img/produtos/") !== 0) {
+        return;
+    }
+
+    $diretorioProdutos = realpath(__DIR__ . "/../../assets/img/produtos");
+    $caminhoCompleto = realpath(__DIR__ . "/../../" . $caminhoRelativo);
+
+    if (!$diretorioProdutos || !$caminhoCompleto) {
+        return;
+    }
+
+    if (strpos($caminhoCompleto, $diretorioProdutos . DIRECTORY_SEPARATOR) !== 0) {
+        return;
+    }
+
+    if (is_file($caminhoCompleto)) {
+        @unlink($caminhoCompleto);
+    }
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -46,10 +70,7 @@ try {
     $pdo->commit();
 
     if ($imagemProduto) {
-        $caminhoImagem = __DIR__ . "/../../" . $imagemProduto;
-        if (file_exists($caminhoImagem)) {
-            @unlink($caminhoImagem);
-        }
+        removerImagemProdutoLocal($imagemProduto);
     }
 
     jsonResponse(true, "Produto removido com sucesso.");

@@ -10,7 +10,7 @@ async function importarCSV(event) {
 
     if (!fileInput.files.length) {
         resultado.className = "alert alert-warning";
-        resultado.textContent = "Selecione um arquivo CSV.";
+        resultado.textContent = "Selecione um arquivo CSV ou XLSX.";
         return;
     }
 
@@ -48,13 +48,13 @@ async function importarCSV(event) {
 
 async function lerJsonSeguro(response) {
     const texto = await response.text();
-    const inicioJson = texto.indexOf("{");
 
-    if (inicioJson === -1) {
-        throw new Error("Resposta invalida do servidor.");
+    try {
+        return JSON.parse(texto);
+    } catch (error) {
+        console.error("Resposta invalida do servidor:", texto);
+        throw new Error("Resposta invalida do servidor. Verifique o arquivo e tente novamente.");
     }
-
-    return JSON.parse(texto.slice(inicioJson));
 }
 
 document.addEventListener("DOMContentLoaded", function () {

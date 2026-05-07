@@ -130,8 +130,10 @@
                             <img src="assets/img/icons/grafico.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
                             <span>Comparação de Preços por Mercado</span>
                         </h5>
-                        <div class="comparador-grafico comparador-grafico-principal">
-                            <canvas id="graficoPrecos"></canvas>
+                        <div class="comparador-grafico-rolagem">
+                            <div class="comparador-grafico comparador-grafico-principal" id="areaGraficoPrecos">
+                                <canvas id="graficoPrecos"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -147,8 +149,10 @@
                             <img src="assets/img/icons/economia.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
                             <span>Economia por Produto</span>
                         </h5>
-                        <div class="comparador-grafico comparador-grafico-secundario">
-                            <canvas id="graficoEconomia"></canvas>
+                        <div class="comparador-grafico-scroll-y">
+                            <div class="comparador-grafico comparador-grafico-secundario" id="areaGraficoEconomia">
+                                <canvas id="graficoEconomia"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -177,7 +181,7 @@
                             <img src="assets/img/icons/lista.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
                             <span>Comparação Detalhada</span>
                         </h5>
-                        <div class="table-responsive">
+                        <div class="table-responsive comparador-tabela-scroll">
                             <table class="table table-hover" id="tabelaComparacao">
                                 <thead class="table-light">
                                     <tr id="cabecalhoTabelaComparacao">
@@ -204,7 +208,7 @@
     <script src="assets/js/perfil.js?v=20260507-transicoes4"></script>
     <script src="assets/js/pesquisa-rapida.js?v=20260507-opt1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="assets/js/comparador.js"></script>
+    <script src="assets/js/comparador.js?v=20260507-scroll-y"></script>
 
 </body>
 

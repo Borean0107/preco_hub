@@ -89,23 +89,23 @@
                     <div class="card-body p-4 p-md-5">
                         <h1 class="h3 text-marrom fw-bold mb-2">Importar Planilha</h1>
                         <p class="text-muted mb-4">
-                            Envie um CSV com as colunas produto, marca, categoria e uma coluna para cada mercado.
+                            Envie um CSV ou XLSX com as colunas produto, marca, categoria e uma coluna para cada mercado.
                         </p>
 
                         <form id="formImportar">
                             <div class="mb-3">
-                                <label for="arquivo" class="form-label fw-semibold text-marrom">Arquivo CSV</label>
+                                <label for="arquivo" class="form-label fw-semibold text-marrom">Arquivo CSV ou XLSX</label>
                                 <input
                                     type="file"
                                     class="form-control"
                                     id="arquivo"
                                     name="arquivo"
-                                    accept=".csv,text/csv"
+                                    accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                     required>
                             </div>
 
                             <div class="alert alert-info">
-                                Exemplo de cabe&ccedil;alho: produto;marca ou categoria
+                                Exemplo de cabe&ccedil;alho: produto;marca;categoria;Savegnago;Favetta;Pague Menos
                             </div>
 
                             <button type="submit" class="btn btn-laranja px-4">Importar</button>

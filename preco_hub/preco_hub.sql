@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 07, 2026 at 09:53 PM
+-- Generation Time: May 07, 2026 at 10:49 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -37,13 +37,25 @@ CREATE TABLE `categoria` (
 --
 
 INSERT INTO `categoria` (`id_categoria`, `nome_categoria`) VALUES
+(15, 'Achocolatado'),
+(9, 'Açúcar'),
 (1, 'Arroz'),
+(18, 'Bebidas'),
+(11, 'Biscoito'),
 (4, 'Café'),
 (7, 'Farinha'),
 (2, 'Feijão'),
+(20, 'Frios'),
+(13, 'Higiene'),
+(19, 'Laticínios'),
 (5, 'Leite'),
+(12, 'Limpeza'),
 (3, 'Macarrão'),
+(17, 'Maionese'),
+(14, 'Margarina'),
+(10, 'Molho'),
 (6, 'Óleo'),
+(16, 'Sal'),
 (8, 'Suco');
 
 -- --------------------------------------------------------
@@ -89,7 +101,7 @@ CREATE TABLE `lista_produto` (
   `quantidade` int(11) NOT NULL DEFAULT 1,
   `comprado` tinyint(1) NOT NULL DEFAULT 0,
   `data_adicao` datetime NOT NULL DEFAULT current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -166,7 +178,8 @@ CREATE TABLE `usuario` (
 --
 
 INSERT INTO `usuario` (`id_usuario`, `nome_usuario`, `email_usuario`, `senha_usuario`, `data_criacao_usuario`) VALUES
-(3, 'admin', 'admin@gmail.com', '$2y$10$IqcGp03nc2fIbKzVVGqVveokmM8K9Odvr.yDJ10r2MmaT0aRMhubm', '2026-04-29 00:00:00');
+(3, 'admin', 'admin@gmail.com', '$2y$10$IqcGp03nc2fIbKzVVGqVveokmM8K9Odvr.yDJ10r2MmaT0aRMhubm', '2026-04-29 00:00:00'),
+(6, 'teste', 'teste@gmail.com', '$2y$10$BtZ735shxav4Z56MPFNtZ.tKzThhg/pCXLsxpDyfpuZYRntA7Cf5a', '2026-05-07 16:58:40');
 
 --
 -- Indexes for dumped tables
@@ -240,13 +253,13 @@ ALTER TABLE `usuario`
 -- AUTO_INCREMENT for table `categoria`
 --
 ALTER TABLE `categoria`
-  MODIFY `id_categoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_categoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `fabricante`
 --
 ALTER TABLE `fabricante`
-  MODIFY `id_fabricante` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id_fabricante` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=156;
 
 --
 -- AUTO_INCREMENT for table `lista`
@@ -264,13 +277,13 @@ ALTER TABLE `mercado`
 -- AUTO_INCREMENT for table `produto`
 --
 ALTER TABLE `produto`
-  MODIFY `id_produto` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_produto` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=162;
 
 --
 -- AUTO_INCREMENT for table `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Constraints for dumped tables

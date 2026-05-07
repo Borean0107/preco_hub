@@ -1039,6 +1039,58 @@ table td {
 .comparador-grafico {
     position: relative;
     width: 100%;
+    min-width: 100%;
+}
+
+.comparador-grafico-rolagem,
+.comparador-grafico-scroll-y,
+.comparador-tabela-scroll {
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-color: var(--laranja) rgba(148, 163, 184, 0.22);
+}
+
+.comparador-grafico-rolagem {
+    overflow-y: hidden;
+}
+
+.comparador-grafico-scroll-y {
+    max-height: 440px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+}
+
+.comparador-tabela-scroll {
+    max-height: 620px;
+    overflow: auto;
+}
+
+.comparador-grafico-rolagem::-webkit-scrollbar,
+.comparador-grafico-scroll-y::-webkit-scrollbar,
+.comparador-tabela-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.comparador-grafico-rolagem::-webkit-scrollbar-track,
+.comparador-grafico-scroll-y::-webkit-scrollbar-track,
+.comparador-tabela-scroll::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.18);
+    border-radius: 999px;
+}
+
+.comparador-grafico-rolagem::-webkit-scrollbar-thumb,
+.comparador-grafico-scroll-y::-webkit-scrollbar-thumb,
+.comparador-tabela-scroll::-webkit-scrollbar-thumb {
+    background: var(--laranja);
+    border-radius: 999px;
+}
+
+.comparador-tabela-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .comparador-titulo {
@@ -1322,7 +1374,7 @@ body[data-site="usuario"] .hero-profissional {
     min-height: 620px;
     display: flex;
     align-items: center;
-    background-image: url("../../../fundodashboard.png");
+    background-image: url("../../fundodashboard.png");
     background-size: cover;
     background-position: center right;
     background-repeat: no-repeat;

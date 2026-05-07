@@ -51,6 +51,30 @@ $temNovaImagem = $imagemUpload && $imagemUpload["error"] === UPLOAD_ERR_OK;
 $caminhoArquivo = null;
 $imagemProduto = null;
 
+function removerImagemProdutoLocal($caminhoRelativo)
+{
+    $caminhoRelativo = str_replace("\\", "/", (string) $caminhoRelativo);
+
+    if (strpos($caminhoRelativo, "assets/img/produtos/") !== 0) {
+        return;
+    }
+
+    $diretorioProdutos = realpath(__DIR__ . "/../../assets/img/produtos");
+    $caminhoCompleto = realpath(__DIR__ . "/../../" . $caminhoRelativo);
+
+    if (!$diretorioProdutos || !$caminhoCompleto) {
+        return;
+    }
+
+    if (strpos($caminhoCompleto, $diretorioProdutos . DIRECTORY_SEPARATOR) !== 0) {
+        return;
+    }
+
+    if (is_file($caminhoCompleto)) {
+        @unlink($caminhoCompleto);
+    }
+}
+
 if ($temNovaImagem) {
     if ($imagemUpload["size"] > 2 * 1024 * 1024) {
         jsonResponse(false, "A imagem deve ter no maximo 2MB.", null, 400);
@@ -182,10 +206,7 @@ try {
     $pdo->commit();
 
     if ($editando && $imagemProduto && !empty($produtoAtual["imagem_produto"])) {
-        $caminhoImagemAnterior = __DIR__ . "/../../" . $produtoAtual["imagem_produto"];
-        if (file_exists($caminhoImagemAnterior)) {
-            @unlink($caminhoImagemAnterior);
-        }
+        removerImagemProdutoLocal($produtoAtual["imagem_produto"]);
     }
 
     jsonResponse(true, $editando ? "Produto atualizado com sucesso." : "Produto cadastrado com sucesso.", ["id_produto" => $idProduto], $editando ? 200 : 201);

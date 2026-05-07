@@ -189,6 +189,82 @@ function abreviarNome(nome) {
     return texto.length > 18 ? texto.substring(0, 18) + "..." : texto;
 }
 
+function abreviarTexto(texto, limite) {
+    const valor = String(texto || "");
+
+    if (valor.length <= limite) {
+        return valor;
+    }
+
+    return valor.substring(0, Math.max(0, limite - 3)).trimEnd() + "...";
+}
+
+function quebrarRotuloProduto(nome) {
+    const texto = String(nome || "Produto").trim();
+    const partes = texto.split(/\s+/).filter(Boolean);
+    const linhas = [];
+    let linhaAtual = "";
+    const limiteLinha = 13;
+
+    partes.forEach(function (parte) {
+        const candidata = linhaAtual ? linhaAtual + " " + parte : parte;
+
+        if (candidata.length <= limiteLinha) {
+            linhaAtual = candidata;
+            return;
+        }
+
+        if (linhaAtual) {
+            linhas.push(linhaAtual);
+        }
+
+        linhaAtual = parte;
+    });
+
+    if (linhaAtual) {
+        linhas.push(linhaAtual);
+    }
+
+    if (linhas.length === 0) {
+        return "Produto";
+    }
+
+    if (linhas.length === 1) {
+        return abreviarTexto(linhas[0], limiteLinha);
+    }
+
+    return [
+        abreviarTexto(linhas[0], limiteLinha),
+        abreviarTexto(linhas.slice(1).join(" "), limiteLinha)
+    ];
+}
+
+function obterNomeProdutoPorIndice(indice) {
+    const produto = produtosGlobal[indice];
+    return produto ? produto.nome_produto : "";
+}
+
+function ajustarAreaGraficoPrecos(totalProdutos) {
+    const area = document.getElementById("areaGraficoPrecos");
+
+    if (!area) {
+        return;
+    }
+
+    const larguraVisivel = area.parentElement ? area.parentElement.clientWidth : 0;
+    area.style.width = Math.max(larguraVisivel, 900, totalProdutos * 86) + "px";
+}
+
+function ajustarAreaGraficoEconomia(totalProdutos) {
+    const area = document.getElementById("areaGraficoEconomia");
+
+    if (!area) {
+        return;
+    }
+
+    area.style.height = Math.max(360, totalProdutos * 32) + "px";
+}
+
 function gerarCabecalhoTabela(mercados) {
     const cabecalho = document.getElementById("cabecalhoTabelaComparacao");
 
@@ -310,10 +386,22 @@ function criarOpcoesGraficoPrecos() {
 
     opcoes.plugins.legend.position = "bottom";
     opcoes.plugins.tooltip.callbacks = {
+        title: function (items) {
+            if (!items.length) {
+                return "";
+            }
+
+            return obterNomeProdutoPorIndice(items[0].dataIndex);
+        },
         label: function (context) {
             return context.dataset.label + ": " + formatarPreco(context.parsed.y);
         }
     };
+    opcoes.scales.x.ticks.callback = function (_, index) {
+        return quebrarRotuloProduto(obterNomeProdutoPorIndice(index));
+    };
+    opcoes.scales.x.ticks.maxRotation = 0;
+    opcoes.scales.x.ticks.minRotation = 0;
 
     return opcoes;
 }
@@ -361,6 +449,9 @@ function criarOpcoesGraficoEconomia() {
                     font: {
                         size: 12,
                         weight: "600"
+                    },
+                    callback: function (_, index) {
+                        return abreviarTexto(obterNomeProdutoPorIndice(index), 24);
                     }
                 }
             }
@@ -508,6 +599,9 @@ function gerarGraficos() {
     if (produtosGlobal.length === 0 || mercados.length === 0) {
         return;
     }
+
+    ajustarAreaGraficoPrecos(produtosGlobal.length);
+    ajustarAreaGraficoEconomia(produtosGlobal.length);
 
     // Dados para gráfico de preços
     const dadosPrecos = {
