@@ -1251,9 +1251,14 @@ body[data-site="usuario"] .btn-entrar:hover {
 }
 
 body[data-site="usuario"] .hero-profissional {
-    padding: 5rem 0 !important;
-    background:
-        linear-gradient(135deg, #FFFFFF 0%, #EEF6FF 58%, #ECFDF5 100%);
+    padding: 4rem 0 !important;
+    min-height: 620px;
+    display: flex;
+    align-items: center;
+    background-image: url("../../../fundodashboard.png");
+    background-size: cover;
+    background-position: center right;
+    background-repeat: no-repeat;
     border-bottom: 1px solid rgba(148, 163, 184, 0.20);
 }
 
