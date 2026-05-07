@@ -3,6 +3,7 @@
     const API_ADICIONAR_LISTA = "backend/listas/adicionar.php";
 
     let produtosCache = null;
+    let buscaRapidaTimeout = null;
 
     function escaparHtml(valor) {
         return String(valor)
@@ -115,7 +116,7 @@
 
         return `
             <article class="busca-rapida-item">
-                <img src="${imagemSegura}" alt="${nomeSeguro}">
+                <img src="${imagemSegura}" alt="${nomeSeguro}" loading="lazy" decoding="async">
                 <div class="busca-rapida-info">
                     <h3>${nomeSeguro}</h3>
                     <small>${marcaSegura} - ${categoriaSegura}</small>
@@ -191,6 +192,11 @@
                 </div>
             `;
         }
+    }
+
+    function agendarRenderizacaoResultados() {
+        window.clearTimeout(buscaRapidaTimeout);
+        buscaRapidaTimeout = window.setTimeout(renderizarResultados, 160);
     }
 
     async function adicionarNaLista(botao) {
@@ -353,7 +359,7 @@
         });
 
         fechar.addEventListener("click", fecharPesquisa);
-        campo.addEventListener("input", renderizarResultados);
+        campo.addEventListener("input", agendarRenderizacaoResultados);
 
         resultados.addEventListener("click", function (event) {
             const botaoAdicionar = event.target.closest(".busca-rapida-adicionar");

@@ -28,8 +28,17 @@ function usuarioEhAdmin(usuario) {
     return emailUsuario === ADMIN_EMAIL;
 }
 
+function navegarComTransicao(destino) {
+    if (window.PrecoHubTransitions && typeof window.PrecoHubTransitions.go === "function") {
+        window.PrecoHubTransitions.go(destino);
+        return;
+    }
+
+    window.location.href = destino;
+}
+
 function redirecionarUsuarioLogado(usuario) {
-    window.location.href = usuarioEhAdmin(usuario) ? "adicionar-produto.html" : "home.html";
+    navegarComTransicao(usuarioEhAdmin(usuario) ? "adicionar-produto.html" : "home.html");
 }
 
 fetch("backend/auth/me.php", {

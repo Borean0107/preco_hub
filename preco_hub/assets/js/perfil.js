@@ -2,6 +2,8 @@
     var STORAGE_USUARIO_LOGADO = "usuarioLogado";
     var ADMIN_EMAIL = "admin@gmail.com";
     var API_TROCAR_SENHA = "backend/auth/trocar-senha.php";
+    var DURACAO_ANIMACAO_CAIXA = 180;
+    var timeoutFecharCaixa = null;
 
     function obterElemento(id) {
         return document.getElementById(id);
@@ -30,6 +32,19 @@
         return document.body && document.body.dataset.adminPage === "true";
     }
 
+    function navegarComTransicao(destino, substituir) {
+        if (window.PrecoHubTransitions && typeof window.PrecoHubTransitions.go === "function") {
+            window.PrecoHubTransitions.go(destino, { replace: Boolean(substituir) });
+            return;
+        }
+
+        if (substituir) {
+            window.location.replace(destino);
+        } else {
+            window.location.href = destino;
+        }
+    }
+
     function obterUsuarioSalvo() {
         var dados = localStorage.getItem(STORAGE_USUARIO_LOGADO);
 
@@ -51,12 +66,12 @@
         }
 
         if (!usuario) {
-            window.location.replace("login.html");
+            navegarComTransicao("login.html", true);
             return true;
         }
 
         if (!usuarioEhAdmin(usuario)) {
-            window.location.replace("index.html");
+            navegarComTransicao("index.html", true);
             return true;
         }
 
@@ -82,13 +97,35 @@
         var botaoPerfil = obterElemento("botaoPerfil");
         var caixaPerfil = obterElemento("caixaPerfil");
 
-        if (caixaPerfil) {
-            caixaPerfil.classList.add("d-none");
+        if (caixaPerfil && !caixaPerfil.classList.contains("d-none")) {
+            caixaPerfil.classList.remove("perfil-caixa-aberta");
+            window.clearTimeout(timeoutFecharCaixa);
+            timeoutFecharCaixa = window.setTimeout(function () {
+                caixaPerfil.classList.add("d-none");
+            }, DURACAO_ANIMACAO_CAIXA);
         }
 
         if (botaoPerfil) {
             botaoPerfil.setAttribute("aria-expanded", "false");
         }
+    }
+
+    function abrirCaixa() {
+        var botaoPerfil = obterElemento("botaoPerfil");
+        var caixaPerfil = obterElemento("caixaPerfil");
+
+        if (!botaoPerfil || !caixaPerfil) {
+            return;
+        }
+
+        window.clearTimeout(timeoutFecharCaixa);
+        caixaPerfil.classList.remove("d-none");
+
+        window.requestAnimationFrame(function () {
+            caixaPerfil.classList.add("perfil-caixa-aberta");
+        });
+
+        botaoPerfil.setAttribute("aria-expanded", "true");
     }
 
     function alternarCaixa() {
@@ -99,9 +136,14 @@
             return;
         }
 
-        var vaiAbrir = caixaPerfil.classList.contains("d-none");
-        caixaPerfil.classList.toggle("d-none", !vaiAbrir);
-        botaoPerfil.setAttribute("aria-expanded", vaiAbrir ? "true" : "false");
+        var estaAberta = !caixaPerfil.classList.contains("d-none") &&
+            caixaPerfil.classList.contains("perfil-caixa-aberta");
+
+        if (estaAberta) {
+            fecharCaixa();
+        } else {
+            abrirCaixa();
+        }
     }
 
     function mostrarEntrar() {
@@ -136,6 +178,8 @@
         }
 
         if (caixaPerfil) {
+            window.clearTimeout(timeoutFecharCaixa);
+            caixaPerfil.classList.remove("perfil-caixa-aberta");
             caixaPerfil.classList.add("d-none");
         }
 
@@ -380,7 +424,7 @@
             return;
         }
 
-        window.location.href = "index.html";
+        navegarComTransicao("index.html");
     }
 
     function registrarEventos() {

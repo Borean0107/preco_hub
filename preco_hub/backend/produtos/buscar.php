@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
 
-$termo = trim($_GET["termo"] ?? "");
+$termo = trim($_GET["termo"] ?? $_GET["q"] ?? "");
 $categoria = trim($_GET["categoria"] ?? "");
 $precoMin = filter_var($_GET["preco_min"] ?? 0, FILTER_VALIDATE_FLOAT);
 $precoMax = filter_var($_GET["preco_max"] ?? 999999, FILTER_VALIDATE_FLOAT);
@@ -15,6 +15,10 @@ if (strlen($termo) < 2) {
 
 $precoMin = $precoMin === false ? 0 : $precoMin;
 $precoMax = $precoMax === false ? 999999 : $precoMax;
+
+if ($precoMin > $precoMax) {
+    [$precoMin, $precoMax] = [$precoMax, $precoMin];
+}
 
 $sql = "
 SELECT DISTINCT
@@ -33,14 +37,20 @@ LEFT JOIN categoria c ON c.id_categoria = p.fk_categoria_id_categoria
 INNER JOIN mercado_produto mp ON mp.fk_produto_id_produto = p.id_produto
 INNER JOIN mercado m ON m.id_mercado = mp.fk_mercado_id_mercado
 WHERE (
-    p.nome_produto LIKE :termo
-    OR p.descricao_produto LIKE :termo
-    OR f.nome_fabricante LIKE :termo
-    OR c.nome_categoria LIKE :termo
+    p.nome_produto LIKE :termo_nome
+    OR p.descricao_produto LIKE :termo_descricao
+    OR f.nome_fabricante LIKE :termo_fabricante
+    OR c.nome_categoria LIKE :termo_categoria
 )
 ";
 
-$params = [":termo" => "%{$termo}%"];
+$termoBusca = "%{$termo}%";
+$params = [
+    ":termo_nome" => $termoBusca,
+    ":termo_descricao" => $termoBusca,
+    ":termo_fabricante" => $termoBusca,
+    ":termo_categoria" => $termoBusca
+];
 
 if (!empty($categoria)) {
     $sql .= " AND c.nome_categoria = :categoria";

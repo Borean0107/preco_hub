@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 08/04/2026 às 00:20
--- Versão do servidor: 10.4.32-MariaDB
--- Versão do PHP: 8.0.30
+-- Generation Time: May 07, 2026 at 09:53 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Banco de dados: `preco_hub`
+-- Database: `preco_hub`
 --
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `categoria`
+-- Table structure for table `categoria`
 --
 
 CREATE TABLE `categoria` (
@@ -33,7 +33,7 @@ CREATE TABLE `categoria` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `categoria`
+-- Dumping data for table `categoria`
 --
 
 INSERT INTO `categoria` (`id_categoria`, `nome_categoria`) VALUES
@@ -49,7 +49,7 @@ INSERT INTO `categoria` (`id_categoria`, `nome_categoria`) VALUES
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `fabricante`
+-- Table structure for table `fabricante`
 --
 
 CREATE TABLE `fabricante` (
@@ -57,25 +57,44 @@ CREATE TABLE `fabricante` (
   `nome_fabricante` varchar(120) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Despejando dados para a tabela `fabricante`
+-- Table structure for table `lista`
 --
 
-INSERT INTO `fabricante` (`id_fabricante`, `nome_fabricante`) VALUES
-(2, 'Barilla'),
-(8, 'Del Valle'),
-(7, 'Dona Benta'),
-(5, 'Italac'),
-(3, 'Kicaldo'),
-(6, 'Liza'),
-(4, 'Pilão'),
-(1, 'Tio João');
+CREATE TABLE `lista` (
+  `id_lista` int(11) NOT NULL,
+  `nome_lista` varchar(120) NOT NULL,
+  `data_criacao_lista` datetime NOT NULL DEFAULT current_timestamp(),
+  `fk_usuario_id_usuario` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lista`
+--
+
+INSERT INTO `lista` (`id_lista`, `nome_lista`, `data_criacao_lista`, `fk_usuario_id_usuario`) VALUES
+(3, 'Minha lista', '2026-05-05 23:04:26', 3);
 
 -- --------------------------------------------------------
 
+--
+-- Table structure for table `lista_produto`
+--
+
+CREATE TABLE `lista_produto` (
+  `fk_lista_id_lista` int(11) NOT NULL,
+  `fk_produto_id_produto` int(11) NOT NULL,
+  `quantidade` int(11) NOT NULL DEFAULT 1,
+  `comprado` tinyint(1) NOT NULL DEFAULT 0,
+  `data_adicao` datetime NOT NULL DEFAULT current_timestamp()
+) ;
+
+-- --------------------------------------------------------
 
 --
--- Estrutura para tabela `mercado`
+-- Table structure for table `mercado`
 --
 
 CREATE TABLE `mercado` (
@@ -89,18 +108,19 @@ CREATE TABLE `mercado` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `mercado`
+-- Dumping data for table `mercado`
 --
 
 INSERT INTO `mercado` (`id_mercado`, `nome_mercado`, `cnpj_mercado`, `endereco_mercado`, `bairro_mercado`, `cidade_mercado`, `estado_mercado`) VALUES
 (1, 'Savegnago', '00.000.000/0001-01', 'Rua Exemplo, 100', 'Centro', 'Araras', 'SP'),
 (2, 'Favetta', '00.000.000/0001-02', 'Av. Exemplo, 200', 'Jardim', 'Araras', 'SP'),
-(3, 'Pague Menos', '00.000.000/0001-03', 'Rua Modelo, 300', 'Vila', 'Araras', 'SP');
+(3, 'Pague Menos', '00.000.000/0001-03', 'Rua Modelo, 300', 'Vila', 'Araras', 'SP'),
+(4, 'Delta', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `mercado_produto`
+-- Table structure for table `mercado_produto`
 --
 
 CREATE TABLE `mercado_produto` (
@@ -111,40 +131,10 @@ CREATE TABLE `mercado_produto` (
   `disponibilidade_produto` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Despejando dados para a tabela `mercado_produto`
---
-
-INSERT INTO `mercado_produto` (`fk_mercado_id_mercado`, `fk_produto_id_produto`, `preco_produto_mercado`, `data_atualizacao_preco`, `disponibilidade_produto`) VALUES
-(1, 1, 29.90, NOW(), 1),
-(2, 1, 31.50, NOW(), 1),
-(3, 1, 30.20, NOW(), 1),
-(1, 2, 8.50, NOW(), 1),
-(2, 2, 8.90, NOW(), 1),
-(3, 2, 8.30, NOW(), 1),
-(1, 3, 12.90, NOW(), 1),
-(2, 3, 13.50, NOW(), 1),
-(3, 3, 12.50, NOW(), 1),
-(1, 4, 15.90, NOW(), 1),
-(2, 4, 16.50, NOW(), 1),
-(3, 4, 15.20, NOW(), 1),
-(1, 5, 5.50, NOW(), 1),
-(2, 5, 5.80, NOW(), 1),
-(3, 5, 5.40, NOW(), 1),
-(1, 6, 11.90, NOW(), 1),
-(2, 6, 12.50, NOW(), 1),
-(3, 6, 11.70, NOW(), 1),
-(1, 7, 9.90, NOW(), 1),
-(2, 7, 10.30, NOW(), 1),
-(3, 7, 9.50, NOW(), 1),
-(1, 8, 7.90, NOW(), 1),
-(2, 8, 8.50, NOW(), 1),
-(3, 8, 7.80, NOW(), 1);
-
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `produto`
+-- Table structure for table `produto`
 --
 
 CREATE TABLE `produto` (
@@ -157,24 +147,10 @@ CREATE TABLE `produto` (
   `fk_fabricante_id_fabricante` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Despejando dados para a tabela `produto`
---
-
-INSERT INTO `produto` (`id_produto`, `nome_produto`, `descricao_produto`, `imagem_produto`, `codigo_barras_produto`, `fk_categoria_id_categoria`, `fk_fabricante_id_fabricante`) VALUES
-(1, 'Arroz Tio João Integral 5kg', 'Arroz integral de alta qualidade', 'assets/img/produtos/arroz_tio_joao.jpg', '7898028001109', 1, 1),
-(2, 'Feijão Carioca Kicaldo 1kg', 'Feijão carioca selecionado', 'assets/img/produtos/feijao_kicaldo.jpg', '7896142700016', 2, 3),
-(3, 'Macarrão Integral Barilla 500g', 'Macarrão integral saudável', 'assets/img/produtos/macarrao_barilla.jpg', '8076800195047', 3, 2),
-(4, 'Café Pilão Tradicional 500g', 'Café coado tradicional Pilão', 'assets/img/produtos/cafe_pilao.jpg', '7898943700051', 4, 4),
-(5, 'Leite Integral Italac 1L', 'Leite integral fresco', 'assets/img/produtos/leite_italac.jpg', '7896065900023', 5, 5),
-(6, 'Óleo de Soja Liza 900ml', 'Óleo de soja refinado', 'assets/img/produtos/oleo_liza.jpg', '7891515060010', 6, 6),
-(7, 'Farinha de Trigo Dona Benta 1kg', 'Farinha de trigo especial', 'assets/img/produtos/farinha_dona_benta.jpg', '7896402500012', 7, 7),
-(8, 'Suco Del Valle Uva 1L', 'Suco integral de uva', 'assets/img/produtos/suco_del_valle.jpg', '7898927201156', 8, 8);
-
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `usuario`
+-- Table structure for table `usuario`
 --
 
 CREATE TABLE `usuario` (
@@ -186,66 +162,53 @@ CREATE TABLE `usuario` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Despejando dados para a tabela `usuario`
+-- Dumping data for table `usuario`
 --
 
 INSERT INTO `usuario` (`id_usuario`, `nome_usuario`, `email_usuario`, `senha_usuario`, `data_criacao_usuario`) VALUES
 (3, 'admin', 'admin@gmail.com', '$2y$10$IqcGp03nc2fIbKzVVGqVveokmM8K9Odvr.yDJ10r2MmaT0aRMhubm', '2026-04-29 00:00:00');
 
--- --------------------------------------------------------
-
 --
--- Estrutura para tabela `lista`
---
-
-CREATE TABLE `lista` (
-  `id_lista` int(11) NOT NULL,
-  `nome_lista` varchar(120) NOT NULL,
-  `data_criacao_lista` datetime NOT NULL DEFAULT current_timestamp(),
-  `fk_usuario_id_usuario` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `lista_produto`
---
-
-CREATE TABLE `lista_produto` (
-  `fk_lista_id_lista` int(11) NOT NULL,
-  `fk_produto_id_produto` int(11) NOT NULL,
-  `quantidade` int(11) NOT NULL DEFAULT 1,
-  `comprado` tinyint(1) NOT NULL DEFAULT 0,
-  `data_adicao` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Índices para tabelas despejadas
+-- Indexes for dumped tables
 --
 
 --
--- Índices de tabela `categoria`
+-- Indexes for table `categoria`
 --
 ALTER TABLE `categoria`
   ADD PRIMARY KEY (`id_categoria`),
   ADD UNIQUE KEY `nome_categoria` (`nome_categoria`);
 
 --
--- Índices de tabela `fabricante`
+-- Indexes for table `fabricante`
 --
 ALTER TABLE `fabricante`
   ADD PRIMARY KEY (`id_fabricante`),
   ADD UNIQUE KEY `nome_fabricante` (`nome_fabricante`);
 
 --
--- Índices de tabela `mercado`
+-- Indexes for table `lista`
+--
+ALTER TABLE `lista`
+  ADD PRIMARY KEY (`id_lista`),
+  ADD UNIQUE KEY `uq_lista_usuario` (`fk_usuario_id_usuario`);
+
+--
+-- Indexes for table `lista_produto`
+--
+ALTER TABLE `lista_produto`
+  ADD PRIMARY KEY (`fk_lista_id_lista`,`fk_produto_id_produto`),
+  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`);
+
+--
+-- Indexes for table `mercado`
 --
 ALTER TABLE `mercado`
   ADD PRIMARY KEY (`id_mercado`),
   ADD UNIQUE KEY `nome_mercado` (`nome_mercado`);
 
 --
--- Índices de tabela `mercado_produto`
+-- Indexes for table `mercado_produto`
 --
 ALTER TABLE `mercado_produto`
   ADD PRIMARY KEY (`fk_mercado_id_mercado`,`fk_produto_id_produto`),
@@ -253,107 +216,92 @@ ALTER TABLE `mercado_produto`
   ADD KEY `idx_mercado_produto_produto_preco` (`fk_produto_id_produto`,`preco_produto_mercado`);
 
 --
--- Índices de tabela `produto`
+-- Indexes for table `produto`
 --
 ALTER TABLE `produto`
   ADD PRIMARY KEY (`id_produto`),
-  ADD UNIQUE KEY `codigo_barras_produto` (`codigo_barras_produto`),
   ADD UNIQUE KEY `uq_produto_nome` (`nome_produto`),
+  ADD UNIQUE KEY `codigo_barras_produto` (`codigo_barras_produto`),
   ADD KEY `fk_produto_categoria` (`fk_categoria_id_categoria`),
   ADD KEY `fk_produto_fabricante` (`fk_fabricante_id_fabricante`);
 
 --
--- Índices de tabela `usuario`
+-- Indexes for table `usuario`
 --
 ALTER TABLE `usuario`
   ADD PRIMARY KEY (`id_usuario`),
   ADD UNIQUE KEY `email_usuario` (`email_usuario`);
 
 --
--- Indices de tabela `lista`
---
-ALTER TABLE `lista`
-  ADD PRIMARY KEY (`id_lista`),
-  ADD UNIQUE KEY `uq_lista_usuario` (`fk_usuario_id_usuario`);
-
---
--- Indices de tabela `lista_produto`
---
-ALTER TABLE `lista_produto`
-  ADD PRIMARY KEY (`fk_lista_id_lista`,`fk_produto_id_produto`),
-  ADD KEY `fk_lista_produto_produto` (`fk_produto_id_produto`),
-  ADD CONSTRAINT `chk_lista_produto_quantidade` CHECK (`quantidade` > 0);
-
---
--- AUTO_INCREMENT para tabelas despejadas
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT de tabela `categoria`
+-- AUTO_INCREMENT for table `categoria`
 --
 ALTER TABLE `categoria`
   MODIFY `id_categoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT de tabela `fabricante`
+-- AUTO_INCREMENT for table `fabricante`
 --
 ALTER TABLE `fabricante`
-  MODIFY `id_fabricante` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_fabricante` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
--- AUTO_INCREMENT de tabela `mercado`
---
-ALTER TABLE `mercado`
-  MODIFY `id_mercado` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT de tabela `produto`
---
-ALTER TABLE `produto`
-  MODIFY `id_produto` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
-
---
--- AUTO_INCREMENT de tabela `usuario`
---
-ALTER TABLE `usuario`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT de tabela `lista`
+-- AUTO_INCREMENT for table `lista`
 --
 ALTER TABLE `lista`
-  MODIFY `id_lista` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_lista` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- Restrições para tabelas despejadas
+-- AUTO_INCREMENT for table `mercado`
+--
+ALTER TABLE `mercado`
+  MODIFY `id_mercado` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `produto`
+--
+ALTER TABLE `produto`
+  MODIFY `id_produto` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `usuario`
+--
+ALTER TABLE `usuario`
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- Constraints for dumped tables
 --
 
 --
--- Restrições para tabelas `mercado_produto`
+-- Constraints for table `lista`
+--
+ALTER TABLE `lista`
+  ADD CONSTRAINT `fk_lista_usuario` FOREIGN KEY (`fk_usuario_id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `lista_produto`
+--
+ALTER TABLE `lista_produto`
+  ADD CONSTRAINT `fk_lista_produto_lista` FOREIGN KEY (`fk_lista_id_lista`) REFERENCES `lista` (`id_lista`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_lista_produto_produto` FOREIGN KEY (`fk_produto_id_produto`) REFERENCES `produto` (`id_produto`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `mercado_produto`
 --
 ALTER TABLE `mercado_produto`
   ADD CONSTRAINT `fk_mercado_produto_mercado` FOREIGN KEY (`fk_mercado_id_mercado`) REFERENCES `mercado` (`id_mercado`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_mercado_produto_produto` FOREIGN KEY (`fk_produto_id_produto`) REFERENCES `produto` (`id_produto`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Restrições para tabelas `produto`
+-- Constraints for table `produto`
 --
 ALTER TABLE `produto`
   ADD CONSTRAINT `fk_produto_categoria` FOREIGN KEY (`fk_categoria_id_categoria`) REFERENCES `categoria` (`id_categoria`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_produto_fabricante` FOREIGN KEY (`fk_fabricante_id_fabricante`) REFERENCES `fabricante` (`id_fabricante`) ON UPDATE CASCADE;
-
---
--- Restricoes para tabelas `lista`
---
-ALTER TABLE `lista`
-  ADD CONSTRAINT `fk_lista_usuario` FOREIGN KEY (`fk_usuario_id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Restricoes para tabelas `lista_produto`
---
-ALTER TABLE `lista_produto`
-  ADD CONSTRAINT `fk_lista_produto_lista` FOREIGN KEY (`fk_lista_id_lista`) REFERENCES `lista` (`id_lista`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_lista_produto_produto` FOREIGN KEY (`fk_produto_id_produto`) REFERENCES `produto` (`id_produto`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -20,6 +20,15 @@ function emailValido(email) {
     return /\S+@\S+\.\S+/.test(email);
 }
 
+function navegarComTransicao(destino) {
+    if (window.PrecoHubTransitions && typeof window.PrecoHubTransitions.go === "function") {
+        window.PrecoHubTransitions.go(destino);
+        return;
+    }
+
+    window.location.href = destino;
+}
+
 if (registerForm) {
     registerForm.addEventListener("submit", function (event) {
         event.preventDefault();
@@ -74,7 +83,7 @@ if (registerForm) {
                 mostrarMensagemCadastro("success", data.message || "Cadastro realizado com sucesso.");
                 registerForm.reset();
                 setTimeout(function () {
-                    window.location.href = "login.html";
+                    navegarComTransicao("login.html");
                 }, 1200);
             } else {
                 mostrarMensagemCadastro("danger", data.message || "Erro ao cadastrar.");

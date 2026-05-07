@@ -288,7 +288,7 @@ async function renderizarProdutosCadastrados() {
                         <p class="mb-1"><strong>Marca:</strong> ${fabricanteSeguro}</p>
                         <p class="mb-0"><strong>Categoria:</strong> ${categoriaSeguro}</p>
                     </div>
-                    <img src="${imagemSegura}" alt="${nomeSeguro}">
+                    <img src="${imagemSegura}" alt="${nomeSeguro}" loading="lazy" decoding="async">
                 </div>
 
                 <ul class="list-group mt-3">

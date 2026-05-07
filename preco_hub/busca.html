@@ -3,14 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=index.html">
+    <meta http-equiv="refresh" content="2; url=index.html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redirecionando | Pre&ccedil;o-Hub</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=20260507-transicoes4">
+    <script src="assets/js/transicoes.js?v=20260507-opt1"></script>
 </head>
 
 <body>
     <script>
-        window.location.replace("index.html");
+        if (window.PrecoHubTransitions && typeof window.PrecoHubTransitions.go === "function") {
+            window.PrecoHubTransitions.go("index.html", { replace: true });
+        } else {
+            window.location.replace("index.html");
+        }
     </script>
     <p>Redirecionando para <a href="index.html">a tela inicial</a>.</p>
 </body>

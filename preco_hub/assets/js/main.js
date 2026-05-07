@@ -345,7 +345,7 @@ function criarCardProduto(produto) {
 
     coluna.innerHTML = `
         <div class="card product-card h-100">
-            <img src="${imagemSeguro}" class="card-img-top" alt="${nomeSeguro}">
+            <img src="${imagemSeguro}" class="card-img-top" alt="${nomeSeguro}" loading="lazy" decoding="async">
             <div class="card-body">
                 <h5 class="card-title">${nomeSeguro}</h5>
 
@@ -424,10 +424,14 @@ async function renderizarProdutosDoLocalStorage() {
         produtosParaRenderizar.push(produto);
     });
 
+    const fragmento = document.createDocumentFragment();
+
     produtosParaRenderizar.forEach(function (produto) {
         const card = criarCardProduto(produto);
-        container.appendChild(card);
+        fragmento.appendChild(card);
     });
+
+    container.appendChild(fragmento);
 }
 
 document.addEventListener("DOMContentLoaded", async function () {
