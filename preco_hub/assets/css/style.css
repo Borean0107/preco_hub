@@ -842,6 +842,23 @@ main {
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
 }
 
+.product-filter-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(37, 99, 235, 0.28);
+    border-radius: 999px;
+    background-color: rgba(239, 246, 255, 0.96);
+    color: var(--azul);
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 7px 10px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
 /* ================= IMAGENS ================= */
 
 .product-card img,
@@ -918,6 +935,18 @@ main {
     border: 1px dashed var(--borda);
     border-radius: 14px;
     background-color: rgba(37, 99, 235, 0.03);
+}
+
+.filtro-ativo-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    border-radius: 999px;
+    background-color: rgba(37, 99, 235, 0.08);
+    color: var(--azul);
+    font-weight: 800;
+    font-size: 0.88rem;
+    padding: 8px 12px;
 }
 
 /* ================= LOGIN / CADASTRO ================= */

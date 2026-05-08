@@ -481,16 +481,19 @@ function filtrarProdutos() {
         const emDestaque = produto.dataset.destaque === "1";
         const correspondeAoTexto = termo === "" || nome.indexOf(termo) !== -1;
         const correspondeACategoria = emDestaque || categoria === "" || categoriaProduto === categoria;
+        const sinalizacaoFiltrado = produto.querySelector(".product-filter-badge");
 
         if (correspondeAoTexto && correspondeACategoria) {
             animarFiltroProduto(produto, true);
+            alternarVisibilidadeAnimada(sinalizacaoFiltrado, !emDestaque && categoria !== "");
             encontrados++;
         } else {
+            alternarVisibilidadeAnimada(sinalizacaoFiltrado, false);
             animarFiltroProduto(produto, false);
         }
     });
 
-    alternarVisibilidadeAnimada(mensagem, (termo !== "" || categoria !== "") && encontrados === 0);
+    alternarVisibilidadeAnimada(mensagem, false);
 
     atualizarMensagensSecoes();
 }
@@ -507,9 +510,21 @@ function atualizarBotaoFiltroCategoria(nomeCategoria) {
     botao.classList.toggle("is-active", Boolean(nomeCategoria));
 }
 
+function atualizarIndicadorFiltroProdutos() {
+    const indicador = document.getElementById("indicadorFiltroProdutos");
+
+    if (!indicador) {
+        return;
+    }
+
+    indicador.textContent = categoriaFiltroSelecionada ? "Filtro: " + categoriaFiltroSelecionada : "Filtro ativo";
+    alternarVisibilidadeAnimada(indicador, Boolean(categoriaFiltroSelecionada));
+}
+
 function selecionarCategoriaFiltro(nomeCategoria) {
     categoriaFiltroSelecionada = nomeCategoria || "";
     atualizarBotaoFiltroCategoria(categoriaFiltroSelecionada);
+    atualizarIndicadorFiltroProdutos();
     animarEntradaElemento(document.getElementById("botaoFiltrosCategoria"), 0);
 
     document.querySelectorAll(".filtro-categoria-opcao").forEach(function (opcao) {
@@ -661,6 +676,7 @@ function criarCardProduto(produto) {
     coluna.innerHTML = `
         <div class="card product-card h-100">
             ${destaque ? '<span class="product-card-badge">&#9733; Destaque</span>' : ""}
+            <span class="product-filter-badge d-none">Filtrado</span>
             <img src="${imagemSeguro}" class="card-img-top" alt="${nomeSeguro}" loading="lazy" decoding="async">
             <div class="card-body">
                 <h5 class="card-title">${nomeSeguro}</h5>
@@ -721,20 +737,43 @@ function renderizarListaProdutos(container, produtos) {
 function atualizarMensagensSecoes() {
     const campoBusca = document.getElementById("campoBusca");
     const termo = campoBusca ? normalizarTexto(campoBusca.value.trim()) : "";
-    const buscaAtiva = termo !== "" || normalizarTexto(categoriaFiltroSelecionada) !== "";
+    const categoria = normalizarTexto(categoriaFiltroSelecionada);
+    const filtroAtivo = termo !== "" || categoria !== "";
     const containerDestaques = document.getElementById("listaProdutos");
     const containerOutros = document.getElementById("listaProdutosOutros");
     const mensagemDestaques = document.getElementById("mensagemSemDestaques");
     const mensagemOutros = document.getElementById("mensagemSemOutros");
 
     if (mensagemDestaques && containerDestaques) {
-        const totalDestaques = containerDestaques.querySelectorAll(".produto-item").length;
-        alternarVisibilidadeAnimada(mensagemDestaques, !buscaAtiva && totalDestaques === 0);
+        const destaques = Array.from(containerDestaques.querySelectorAll(".produto-item"));
+        const destaquesVisiveis = destaques.filter(function (produto) {
+            return produto.dataset.filtroVisivel !== "0" && produto.style.display !== "none";
+        });
+
+        if (destaques.length === 0) {
+            mensagemDestaques.textContent = "Nenhum produto marcado como destaque.";
+            alternarVisibilidadeAnimada(mensagemDestaques, true);
+        } else {
+            mensagemDestaques.textContent = "Nenhum destaque encontrado para esta busca.";
+            alternarVisibilidadeAnimada(mensagemDestaques, termo !== "" && destaquesVisiveis.length === 0);
+        }
     }
 
     if (mensagemOutros && containerOutros) {
-        const totalOutros = containerOutros.querySelectorAll(".produto-item").length;
-        alternarVisibilidadeAnimada(mensagemOutros, !buscaAtiva && totalOutros === 0);
+        const outros = Array.from(containerOutros.querySelectorAll(".produto-item"));
+        const outrosVisiveis = outros.filter(function (produto) {
+            return produto.dataset.filtroVisivel !== "0" && produto.style.display !== "none";
+        });
+
+        if (outros.length === 0) {
+            mensagemOutros.textContent = "Nenhum outro produto cadastrado.";
+            alternarVisibilidadeAnimada(mensagemOutros, true);
+        } else {
+            mensagemOutros.textContent = filtroAtivo
+                ? "Nenhum outro produto encontrado para este filtro."
+                : "Nenhum outro produto cadastrado.";
+            alternarVisibilidadeAnimada(mensagemOutros, filtroAtivo && outrosVisiveis.length === 0);
+        }
     }
 }
 
