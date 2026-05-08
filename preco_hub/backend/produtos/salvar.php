@@ -25,10 +25,16 @@ $mercados = [];
 
 foreach ($mercadoNomes as $index => $nomeMercado) {
     $nomeMercado = trim($nomeMercado);
-    $precoMercado = isset($mercadoPrecos[$index]) ? $mercadoPrecos[$index] : null;
+    $precoInformado = isset($mercadoPrecos[$index]) ? trim((string) $mercadoPrecos[$index]) : "";
+
+    if ($nomeMercado === "" && $precoInformado === "") {
+        continue;
+    }
+
+    $precoMercado = $precoInformado;
     $precoMercado = filter_var($precoMercado, FILTER_VALIDATE_FLOAT);
 
-    if (!$nomeMercado || $precoMercado === false || $precoMercado <= 0) {
+    if ($nomeMercado === "" || $precoMercado === false || $precoMercado <= 0) {
         jsonResponse(false, "Informe nomes e precos validos para todos os mercados.", null, 400);
     }
 
@@ -36,6 +42,14 @@ foreach ($mercadoNomes as $index => $nomeMercado) {
         "nome" => $nomeMercado,
         "preco" => $precoMercado
     ];
+}
+
+if (count($mercados) < 3) {
+    jsonResponse(false, "Informe pelo menos 3 mercados com preco.", null, 400);
+}
+
+if (count($mercados) > 5) {
+    jsonResponse(false, "Informe no maximo 5 mercados por produto.", null, 400);
 }
 
 if (!$editando && (!$imagemUpload || $imagemUpload["error"] !== UPLOAD_ERR_OK)) {

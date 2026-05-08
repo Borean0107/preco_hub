@@ -330,8 +330,8 @@ function validarFormulario() {
         return false;
     }
 
-    if (mercados.length === 0) {
-        mostrarMensagem("Informe pelo menos um mercado e preço.", "warning");
+    if (mercados.length < 3) {
+        mostrarMensagem("Informe pelo menos 3 mercados com preço.", "warning");
         return false;
     }
 
