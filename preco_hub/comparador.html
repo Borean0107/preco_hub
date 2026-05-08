@@ -107,7 +107,7 @@
                 <div class="card bg-light border-0 shadow-sm h-100">
                     <div class="card-body text-center">
                         <h6 class="text-muted fw-600">Economia Média</h6>
-                        <h3 class="text-info fw-bold" id="economiaMedia">R$ 0,00</h3>
+                        <h3 class="text-primary fw-bold" id="economiaMedia">R$ 0,00</h3>
                     </div>
                 </div>
             </div>
@@ -121,8 +121,39 @@
             </div>
         </div>
 
-        <!-- GRÁFICO DE PREÇOS POR MERCADO -->
+        <!-- TABELA COMPARATIVA -->
         <div class="row mb-5 comparador-conteudo">
+            <div class="col-lg-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title comparador-titulo fw-bold mb-4">
+                            <img src="assets/img/icons/lista.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
+                            <span>Comparação Detalhada</span>
+                        </h5>
+                        <div class="table-responsive comparador-tabela-scroll">
+                            <table class="table table-hover" id="tabelaComparacao">
+                                <thead class="table-light">
+                                    <tr id="cabecalhoTabelaComparacao">
+                                        <th>Produto</th>
+                                        <th>Savegnago</th>
+                                        <th>Favetta</th>
+                                        <th>Pague Menos</th>
+                                        <th>Melhor Preço</th>
+                                        <th>Economia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corpoTabela">
+                                    <!-- Preenchido por JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICO DE PREÇOS POR MERCADO -->
+        <div class="row comparador-conteudo">
             <div class="col-lg-12">
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -160,37 +191,6 @@
                             <div class="comparador-grafico comparador-grafico-principal" id="areaGraficoPrecos">
                                 <canvas id="graficoPrecos"></canvas>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TABELA COMPARATIVA -->
-        <div class="row comparador-conteudo">
-            <div class="col-lg-12">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title comparador-titulo fw-bold mb-4">
-                            <img src="assets/img/icons/lista.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
-                            <span>Comparação Detalhada</span>
-                        </h5>
-                        <div class="table-responsive comparador-tabela-scroll">
-                            <table class="table table-hover" id="tabelaComparacao">
-                                <thead class="table-light">
-                                    <tr id="cabecalhoTabelaComparacao">
-                                        <th>Produto</th>
-                                        <th>Savegnago</th>
-                                        <th>Favetta</th>
-                                        <th>Pague Menos</th>
-                                        <th>Melhor Preço</th>
-                                        <th>Economia</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="corpoTabela">
-                                    <!-- Preenchido por JavaScript -->
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>

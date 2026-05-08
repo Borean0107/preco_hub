@@ -2072,3 +2072,6 @@ body[data-site="usuario"] .site-toast-danger {
         height: 180px;
     }
 }
+
+.text-primary { color: var(--azul) !important; }
+.text-info { color: var(--azul) !important; }
