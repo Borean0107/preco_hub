@@ -1,6 +1,7 @@
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
 const API_SALVAR_PRODUTO = "backend/produtos/salvar.php";
 const API_REMOVER_TODOS_PRODUTOS = "backend/produtos/remover-todos.php";
+const API_DESTAQUE_PRODUTO = "backend/produtos/destaque.php";
 
 const formAdicionarProduto = document.getElementById("formAdicionarProduto");
 const nomeProduto = document.getElementById("nomeProduto");
@@ -33,6 +34,111 @@ function escaparHtml(valor) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+function produtoEstaEmDestaque(produto) {
+    return produto && (
+        produto.destaque_produto === true ||
+        produto.destaque_produto === 1 ||
+        produto.destaque_produto === "1"
+    );
+}
+
+function movimentoReduzido() {
+    return window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function podeAnimar(elemento) {
+    return elemento && typeof elemento.animate === "function" && !movimentoReduzido();
+}
+
+function animarEntradaElemento(elemento, indice) {
+    if (!podeAnimar(elemento)) {
+        return null;
+    }
+
+    return elemento.animate([
+        { opacity: 0, transform: "translateY(14px) scale(0.985)" },
+        { opacity: 1, transform: "translateY(0) scale(1)" }
+    ], {
+        duration: 240,
+        delay: Math.min((indice || 0) * 40, 220),
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        fill: "both"
+    });
+}
+
+function animarPulsoDestaque(elemento, destacar) {
+    if (!podeAnimar(elemento)) {
+        return null;
+    }
+
+    return elemento.animate([
+        { transform: "scale(1)", boxShadow: "0 0 0 rgba(245, 158, 11, 0)" },
+        { transform: "scale(1.06)", boxShadow: destacar ? "0 0 0 5px rgba(245, 158, 11, 0.18)" : "0 0 0 5px rgba(37, 99, 235, 0.12)" },
+        { transform: "scale(1)", boxShadow: "0 0 0 rgba(245, 158, 11, 0)" }
+    ], {
+        duration: 360,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
+    });
+}
+
+function animarItemDestaque(elemento, destacar) {
+    if (!podeAnimar(elemento)) {
+        return null;
+    }
+
+    return elemento.animate([
+        { transform: "translateX(0)", backgroundColor: destacar ? "rgba(255, 251, 235, 0.96)" : "rgba(255, 255, 255, 1)" },
+        { transform: "translateX(4px)", backgroundColor: destacar ? "rgba(254, 243, 199, 0.96)" : "rgba(239, 246, 255, 0.96)" },
+        { transform: "translateX(0)", backgroundColor: "rgba(255, 255, 255, 1)" }
+    ], {
+        duration: 340,
+        easing: "ease"
+    });
+}
+
+async function animarSaidaProdutosCadastrados() {
+    if (!listaProdutosAdicionados || listaProdutosAdicionados.children.length === 0) {
+        return;
+    }
+
+    const itens = Array.from(listaProdutosAdicionados.children);
+
+    if (!itens.some(podeAnimar)) {
+        return;
+    }
+
+    const animacoes = itens.map(function (item, index) {
+        if (!podeAnimar(item)) {
+            return Promise.resolve();
+        }
+
+        const animacao = item.animate([
+            { opacity: 1, transform: "translateY(0) scale(1)" },
+            { opacity: 0, transform: "translateY(10px) scale(0.985)" }
+        ], {
+            duration: 150,
+            delay: Math.min(index * 16, 120),
+            easing: "ease",
+            fill: "forwards"
+        });
+
+        return animacao.finished.catch(function () {});
+    });
+
+    await Promise.all(animacoes);
+}
+
+function animarEntradaProdutosCadastrados() {
+    if (!listaProdutosAdicionados) {
+        return;
+    }
+
+    Array.from(listaProdutosAdicionados.children).forEach(function (item, index) {
+        animarEntradaElemento(item, index);
+    });
 }
 
 async function lerJsonSeguro(response) {
@@ -265,10 +371,12 @@ async function renderizarProdutosCadastrados() {
     if (!listaProdutosAdicionados) return;
 
     const produtos = await buscarProdutos();
+    await animarSaidaProdutosCadastrados();
 
     if (!produtos || produtos.length === 0) {
         listaProdutosAdicionados.className = "produtos-adicionados-vazio text-muted";
         listaProdutosAdicionados.innerHTML = "Nenhum produto cadastrado nesta tela ainda.";
+        animarEntradaElemento(listaProdutosAdicionados, 0);
         if (botaoRemoverTodosProdutos) {
             botaoRemoverTodosProdutos.disabled = true;
         }
@@ -288,12 +396,16 @@ async function renderizarProdutosCadastrados() {
         const fabricanteSeguro = escaparHtml(produto.nome_fabricante || "-");
         const categoriaSeguro = escaparHtml(produto.nome_categoria || "-");
         const imagemSegura = escaparHtml(produto.imagem_produto || "assets/img/logo/logo.png");
+        const emDestaque = produtoEstaEmDestaque(produto);
 
         return `
-            <div class="produto-adicionado-item">
+            <div class="produto-adicionado-item ${emDestaque ? "is-destaque" : ""}">
                 <div class="produto-adicionado-topo">
                     <div class="produto-adicionado-info">
-                        <h3>${nomeSeguro}</h3>
+                        <div class="produto-adicionado-titulo">
+                            <h3>${nomeSeguro}</h3>
+                            ${emDestaque ? '<span class="produto-destaque-badge">&#9733; Destaque</span>' : ""}
+                        </div>
                         <p class="mb-1"><strong>Marca:</strong> ${fabricanteSeguro}</p>
                         <p class="mb-0"><strong>Categoria:</strong> ${categoriaSeguro}</p>
                     </div>
@@ -315,6 +427,16 @@ async function renderizarProdutosCadastrados() {
                 </ul>
 
                 <div class="d-flex gap-2 flex-wrap mt-3">
+                    <button
+                        class="btn btn-sm botao-destaque ${emDestaque ? "is-active" : ""}"
+                        type="button"
+                        data-id="${produto.id_produto}"
+                        data-destaque="${emDestaque ? "1" : "0"}"
+                        aria-pressed="${emDestaque ? "true" : "false"}"
+                        title="${emDestaque ? "Remover dos destaques" : "Marcar como destaque"}">
+                        <span aria-hidden="true">${emDestaque ? "&#9733;" : "&#9734;"}</span>
+                        <span>${emDestaque ? "Em destaque" : "Destacar"}</span>
+                    </button>
                     <button class="btn btn-sm btn-outline-danger botao-remover" data-id="${produto.id_produto}">
                         Remover
                     </button>
@@ -326,8 +448,67 @@ async function renderizarProdutosCadastrados() {
         `;
     }).join("");
 
+    animarEntradaProdutosCadastrados();
     ativarBotoesRemover();
+    ativarBotoesDestaque();
     ativarBotoesEditar(produtos);
+}
+
+function ativarBotoesDestaque() {
+    const botoesDestaque = document.querySelectorAll(".botao-destaque");
+
+    botoesDestaque.forEach(function (botao) {
+        botao.addEventListener("click", async function () {
+            const idProduto = Number(botao.dataset.id);
+            const novoDestaque = botao.dataset.destaque !== "1";
+
+            if (!idProduto) {
+                return;
+            }
+
+            await alternarDestaqueProduto(idProduto, novoDestaque, botao);
+        });
+    });
+}
+
+async function alternarDestaqueProduto(idProduto, destacar, botao) {
+    const textoOriginal = botao ? botao.innerHTML : "";
+
+    if (botao) {
+        botao.disabled = true;
+        botao.innerHTML = destacar ? "Destacando..." : "Atualizando...";
+        animarPulsoDestaque(botao, destacar);
+        animarItemDestaque(botao.closest(".produto-adicionado-item"), destacar);
+    }
+
+    try {
+        const response = await fetch(API_DESTAQUE_PRODUTO, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            },
+            body: new URLSearchParams({
+                id_produto: idProduto,
+                destaque: destacar ? "1" : "0"
+            })
+        });
+
+        const data = await lerJsonSeguro(response);
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Erro ao atualizar destaque.");
+        }
+
+        mostrarMensagem(data.message || "Destaque atualizado.", "success");
+        await renderizarProdutosCadastrados();
+    } catch (error) {
+        mostrarMensagem(error.message, "danger");
+
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = textoOriginal;
+        }
+    }
 }
 
 function ativarBotoesEditar(produtos) {

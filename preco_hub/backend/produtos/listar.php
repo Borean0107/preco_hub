@@ -1,9 +1,12 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
+require_once __DIR__ . "/../helpers/produto_schema.php";
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
+
+garantirColunaDestaqueProduto($pdo);
 
 $sql = "
     SELECT
@@ -11,6 +14,7 @@ $sql = "
         p.nome_produto,
         p.descricao_produto,
         p.imagem_produto,
+        p.destaque_produto,
         f.nome_fabricante,
         c.nome_categoria,
         m.nome_mercado,
@@ -43,6 +47,7 @@ foreach ($rows as $row) {
             "nome_produto" => $row["nome_produto"],
             "descricao_produto" => $row["descricao_produto"],
             "imagem_produto" => $row["imagem_produto"],
+            "destaque_produto" => (bool) $row["destaque_produto"],
             "nome_fabricante" => $row["nome_fabricante"],
             "nome_categoria" => $row["nome_categoria"],
             "data_atualizacao_produto" => null,

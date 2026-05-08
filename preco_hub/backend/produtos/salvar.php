@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../middleware/admin.php";
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
+require_once __DIR__ . "/../helpers/produto_schema.php";
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     jsonResponse(false, "Metodo nao permitido.", null, 405);
@@ -50,6 +51,8 @@ $allowedMimeTypes = [
 $temNovaImagem = $imagemUpload && $imagemUpload["error"] === UPLOAD_ERR_OK;
 $caminhoArquivo = null;
 $imagemProduto = null;
+
+garantirColunaDestaqueProduto($pdo);
 
 function removerImagemProdutoLocal($caminhoRelativo)
 {

@@ -155,6 +155,7 @@ CREATE TABLE `produto` (
   `descricao_produto` text DEFAULT NULL,
   `imagem_produto` varchar(255) NOT NULL,
   `codigo_barras_produto` varchar(50) DEFAULT NULL,
+  `destaque_produto` tinyint(1) NOT NULL DEFAULT 0,
   `fk_categoria_id_categoria` int(11) NOT NULL,
   `fk_fabricante_id_fabricante` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -235,6 +236,7 @@ ALTER TABLE `produto`
   ADD PRIMARY KEY (`id_produto`),
   ADD UNIQUE KEY `uq_produto_nome` (`nome_produto`),
   ADD UNIQUE KEY `codigo_barras_produto` (`codigo_barras_produto`),
+  ADD KEY `idx_produto_destaque` (`destaque_produto`),
   ADD KEY `fk_produto_categoria` (`fk_categoria_id_categoria`),
   ADD KEY `fk_produto_fabricante` (`fk_fabricante_id_fabricante`);
 

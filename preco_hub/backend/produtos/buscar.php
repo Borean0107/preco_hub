@@ -1,12 +1,15 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
+require_once __DIR__ . "/../helpers/produto_schema.php";
 
 $termo = trim($_GET["termo"] ?? $_GET["q"] ?? "");
 $categoria = trim($_GET["categoria"] ?? "");
 $precoMin = filter_var($_GET["preco_min"] ?? 0, FILTER_VALIDATE_FLOAT);
 $precoMax = filter_var($_GET["preco_max"] ?? 999999, FILTER_VALIDATE_FLOAT);
 $mercado = trim($_GET["mercado"] ?? "");
+
+garantirColunaDestaqueProduto($pdo);
 
 if (strlen($termo) < 2) {
     jsonResponse(true, "Nenhum resultado.", [], 200);
@@ -26,6 +29,7 @@ SELECT DISTINCT
     p.nome_produto,
     p.descricao_produto,
     p.imagem_produto,
+    p.destaque_produto,
     f.nome_fabricante,
     c.nome_categoria,
     m.nome_mercado,
@@ -84,6 +88,7 @@ try {
                 "nome_produto" => $row["nome_produto"],
                 "descricao_produto" => $row["descricao_produto"],
                 "imagem_produto" => $row["imagem_produto"],
+                "destaque_produto" => (bool)$row["destaque_produto"],
                 "nome_fabricante" => $row["nome_fabricante"],
                 "nome_categoria" => $row["nome_categoria"],
                 "precos" => []
