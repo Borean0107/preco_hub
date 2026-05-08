@@ -1,6 +1,9 @@
 const STORAGE_PRODUTOS = "produtosCadastrados";
 const API_LISTAR_PRODUTOS = "backend/produtos/listar.php";
+const API_LISTAR_CATEGORIAS = "backend/categorias/listar.php";
 const API_ADICIONAR_LISTA = "backend/listas/adicionar.php";
+
+let categoriaFiltroSelecionada = "";
 
 function escaparHtml(valor) {
     return String(valor)
@@ -249,11 +252,38 @@ async function buscarProdutosDoBackend() {
                 id_produto: produto.id_produto,
                 nome: produto.nome_produto,
                 imagem: produto.imagem_produto,
+                categoria: produto.nome_categoria || "",
                 destaque: produtoEstaEmDestaque(produto),
                 data_atualizacao_produto: produto.data_atualizacao_produto,
                 precos: produto.precos || []
             };
         });
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
+async function buscarCategoriasDoBackend() {
+    try {
+        const response = await fetch(API_LISTAR_CATEGORIAS, {
+            cache: "no-store",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Falha ao carregar categorias.");
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !Array.isArray(data.data)) {
+            throw new Error("Resposta invalida de categorias.");
+        }
+
+        return data.data;
     } catch (error) {
         console.error(error);
         return [];
@@ -442,12 +472,17 @@ function filtrarProdutos() {
     }
 
     const termo = normalizarTexto(campoBusca.value.trim());
+    const categoria = normalizarTexto(categoriaFiltroSelecionada);
     let encontrados = 0;
 
     produtos.forEach(function (produto) {
         const nome = normalizarTexto(produto.dataset.nome || "");
+        const categoriaProduto = normalizarTexto(produto.dataset.categoria || "");
+        const emDestaque = produto.dataset.destaque === "1";
+        const correspondeAoTexto = termo === "" || nome.indexOf(termo) !== -1;
+        const correspondeACategoria = emDestaque || categoria === "" || categoriaProduto === categoria;
 
-        if (termo === "" || nome.indexOf(termo) !== -1) {
+        if (correspondeAoTexto && correspondeACategoria) {
             animarFiltroProduto(produto, true);
             encontrados++;
         } else {
@@ -455,9 +490,135 @@ function filtrarProdutos() {
         }
     });
 
-    alternarVisibilidadeAnimada(mensagem, termo !== "" && encontrados === 0);
+    alternarVisibilidadeAnimada(mensagem, (termo !== "" || categoria !== "") && encontrados === 0);
 
     atualizarMensagensSecoes();
+}
+
+function atualizarBotaoFiltroCategoria(nomeCategoria) {
+    const botao = document.getElementById("botaoFiltrosCategoria");
+
+    if (!botao) {
+        return;
+    }
+
+    botao.textContent = "Filtrar";
+    botao.title = nomeCategoria ? "Filtrando por " + nomeCategoria : "Filtrar por categoria";
+    botao.classList.toggle("is-active", Boolean(nomeCategoria));
+}
+
+function selecionarCategoriaFiltro(nomeCategoria) {
+    categoriaFiltroSelecionada = nomeCategoria || "";
+    atualizarBotaoFiltroCategoria(categoriaFiltroSelecionada);
+    animarEntradaElemento(document.getElementById("botaoFiltrosCategoria"), 0);
+
+    document.querySelectorAll(".filtro-categoria-opcao").forEach(function (opcao) {
+        const ativa = (opcao.dataset.categoria || "") === categoriaFiltroSelecionada;
+        opcao.classList.toggle("is-active", ativa);
+        opcao.setAttribute("aria-pressed", ativa ? "true" : "false");
+    });
+
+    filtrarProdutos();
+}
+
+function criarBotaoCategoriaFiltro(nomeCategoria) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "dropdown-item filtro-categoria-opcao";
+    botao.dataset.categoria = nomeCategoria;
+    botao.textContent = nomeCategoria;
+    botao.setAttribute("aria-pressed", "false");
+
+    botao.addEventListener("click", function () {
+        selecionarCategoriaFiltro(nomeCategoria);
+    });
+
+    return botao;
+}
+
+function animarAberturaMenuFiltroCategoria() {
+    const menu = document.getElementById("menuFiltrosCategoria");
+
+    if (menu) {
+        menu.scrollTop = 0;
+    }
+
+    if (!podeAnimar(menu)) {
+        return;
+    }
+
+    menu.animate([
+        { opacity: 0 },
+        { opacity: 1 }
+    ], {
+        duration: 150,
+        easing: "ease"
+    });
+
+    Array.from(menu.querySelectorAll(".filtro-categoria-opcao, .dropdown-item-text")).forEach(function (item, index) {
+        if (!podeAnimar(item)) {
+            return;
+        }
+
+        item.animate([
+            { opacity: 0, transform: "translateX(-8px)" },
+            { opacity: 1, transform: "translateX(0)" }
+        ], {
+            duration: 170,
+            delay: Math.min(index * 24, 180),
+            easing: "ease",
+            fill: "both"
+        });
+    });
+}
+
+async function carregarFiltrosCategoria() {
+    const listaCategorias = document.getElementById("listaCategoriasFiltro");
+
+    if (!listaCategorias) {
+        return;
+    }
+
+    const categorias = await buscarCategoriasDoBackend();
+    listaCategorias.innerHTML = "";
+
+    if (categorias.length === 0) {
+        listaCategorias.innerHTML = '<span class="dropdown-item-text text-muted">Nenhuma categoria cadastrada.</span>';
+        return;
+    }
+
+    categorias.forEach(function (categoria) {
+        const nomeCategoria = categoria.nome_categoria || "";
+        let botao;
+
+        if (!nomeCategoria) {
+            return;
+        }
+
+        botao = criarBotaoCategoriaFiltro(nomeCategoria);
+        listaCategorias.appendChild(botao);
+        animarEntradaElemento(botao, listaCategorias.children.length - 1);
+    });
+
+    if (categoriaFiltroSelecionada) {
+        selecionarCategoriaFiltro(categoriaFiltroSelecionada);
+    }
+}
+
+function ativarFiltrosCategoria() {
+    const botaoFiltro = document.getElementById("botaoFiltrosCategoria");
+
+    document.querySelectorAll(".filtro-categoria-opcao").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            selecionarCategoriaFiltro(botao.dataset.categoria || "");
+        });
+    });
+
+    if (botaoFiltro) {
+        botaoFiltro.addEventListener("shown.bs.dropdown", animarAberturaMenuFiltroCategoria);
+    }
+
+    carregarFiltrosCategoria();
 }
 
 function ativarBusca() {
@@ -484,6 +645,7 @@ function criarCardProduto(produto) {
     const coluna = document.createElement("div");
     coluna.className = "col-md-6 col-lg-4 produto-item";
     coluna.dataset.nome = normalizarTexto(produto.nome || "");
+    coluna.dataset.categoria = produto.categoria || produto.nome_categoria || "";
     coluna.dataset.destaque = produtoEstaEmDestaque(produto) ? "1" : "0";
 
     const precosOrdenados = (produto.precos || []).slice().sort(function (a, b) {
@@ -559,7 +721,7 @@ function renderizarListaProdutos(container, produtos) {
 function atualizarMensagensSecoes() {
     const campoBusca = document.getElementById("campoBusca");
     const termo = campoBusca ? normalizarTexto(campoBusca.value.trim()) : "";
-    const buscaAtiva = termo !== "";
+    const buscaAtiva = termo !== "" || normalizarTexto(categoriaFiltroSelecionada) !== "";
     const containerDestaques = document.getElementById("listaProdutos");
     const containerOutros = document.getElementById("listaProdutosOutros");
     const mensagemDestaques = document.getElementById("mensagemSemDestaques");
@@ -632,6 +794,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     ordenarPrecosDosCards();
     ativarBotoesAdicionar();
     ativarBusca();
+    ativarFiltrosCategoria();
 });
 
 window.addEventListener("focus", async function () {

@@ -609,6 +609,23 @@ main {
     max-width: 650px;
 }
 
+.hero-search-controles {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hero-search-input {
+    flex: 1 1 420px;
+    min-width: min(100%, 280px);
+}
+
+.filtros-categoria-wrapper {
+    flex: 0 0 auto;
+    position: relative;
+}
+
 .hero-search .form-control {
     min-height: 60px;
     border-radius: 16px 0 0 16px !important;
@@ -616,9 +633,74 @@ main {
     box-shadow: none;
 }
 
-.hero-search .btn {
+.hero-search .hero-search-input .btn {
     border-radius: 0 16px 16px 0 !important;
     font-weight: 700;
+    min-width: 150px;
+    min-height: 66px;
+    padding: 0 28px !important;
+    font-size: 1.25rem;
+}
+
+.hero-search .botao-filtros-categoria {
+    min-height: 66px;
+    border-radius: 16px !important;
+    border-color: var(--azul);
+    color: #FFFFFF;
+    background-color: var(--azul);
+    width: 150px;
+    padding: 0 28px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.hero-search .botao-filtros-categoria:hover,
+.hero-search .botao-filtros-categoria.show,
+.hero-search .botao-filtros-categoria.is-active {
+    border-color: var(--azul-escuro);
+    color: #FFFFFF;
+    background-color: var(--azul-escuro);
+}
+
+.hero-search .hero-search-input #botaoBusca {
+    border-radius: 0 16px 16px 0 !important;
+}
+
+.filtros-categoria-menu {
+    width: min(320px, calc(100vw - 32px));
+    max-height: 320px;
+    overflow-y: auto;
+    top: calc(100% + 8px) !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    border: 1px solid rgba(148, 163, 184, 0.30);
+    border-radius: 14px;
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
+}
+
+.filtro-categoria-opcao {
+    white-space: normal;
+}
+
+.filtro-categoria-opcao.is-active,
+.filtro-categoria-opcao:active {
+    color: var(--azul);
+    background-color: rgba(37, 99, 235, 0.08);
+    font-weight: 700;
+}
+
+@media (max-width: 575.98px) {
+    .hero-search-controles,
+    .filtros-categoria-wrapper,
+    .hero-search .botao-filtros-categoria {
+        width: 100%;
+        max-width: 100%;
+    }
 }
 
 .hero-logo {
@@ -1131,6 +1213,11 @@ main {
     font-weight: 600;
     border-radius: 999px;
     padding: 8px 12px;
+}
+
+.badge-economia {
+    background-color: var(--azul) !important;
+    color: #FFFFFF !important;
 }
 
 /* ================= TABELAS ================= */

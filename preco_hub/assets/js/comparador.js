@@ -777,7 +777,7 @@ function gerarTabela() {
                 <small class="d-block text-muted">${escaparHtml(melhorPreco.mercado)}</small>
             </td>
             <td>
-                <span class="badge bg-info">${formatarPreco(economia)}</span>
+                <span class="badge badge-economia">${formatarPreco(economia)}</span>
             </td>
         `;
         corpo.appendChild(linha);
