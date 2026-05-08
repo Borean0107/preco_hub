@@ -7,7 +7,7 @@
     <title>Comparador de Preços | Preço-Hub</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css?v=20260507-transicoes4">
+    <link rel="stylesheet" href="assets/css/style.css?v=20260507-produto-combo">
     <script src="assets/js/transicoes.js?v=20260507-opt1"></script>
 </head>
 
@@ -130,42 +130,36 @@
                             <img src="assets/img/icons/grafico.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
                             <span>Comparação de Preços por Mercado</span>
                         </h5>
+                        <div class="comparador-filtro-produto mb-4">
+                            <label for="buscaProdutoComparacao" class="form-label fw-600">Produto para comparar</label>
+                            <div class="comparador-produto-combo" id="produtoComparacaoCombo">
+                                <input
+                                    type="search"
+                                    class="form-control"
+                                    id="buscaProdutoComparacao"
+                                    placeholder="Pesquisar ou escolher produto..."
+                                    autocomplete="off"
+                                    aria-autocomplete="list"
+                                    aria-expanded="false"
+                                    aria-controls="produtoComparacaoSugestoes"
+                                    aria-label="Pesquisar produto para comparar">
+                                <button
+                                    type="button"
+                                    class="comparador-produto-toggle"
+                                    id="abrirProdutosComparacao"
+                                    aria-label="Mostrar produtos"></button>
+                                <div
+                                    class="comparador-produto-sugestoes d-none"
+                                    id="produtoComparacaoSugestoes"
+                                    role="listbox"
+                                    aria-label="Produtos encontrados"></div>
+                                <select class="d-none" id="produtoComparacao" aria-label="Produto selecionado"></select>
+                            </div>
+                        </div>
                         <div class="comparador-grafico-rolagem">
                             <div class="comparador-grafico comparador-grafico-principal" id="areaGraficoPrecos">
                                 <canvas id="graficoPrecos"></canvas>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- GRÁFICO DE ECONOMIA -->
-        <div class="row mb-5 comparador-conteudo">
-            <div class="col-lg-6">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title comparador-titulo fw-bold mb-4">
-                            <img src="assets/img/icons/economia.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
-                            <span>Economia por Produto</span>
-                        </h5>
-                        <div class="comparador-grafico-scroll-y">
-                            <div class="comparador-grafico comparador-grafico-secundario" id="areaGraficoEconomia">
-                                <canvas id="graficoEconomia"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title comparador-titulo fw-bold mb-4">
-                            <img src="assets/img/icons/mercado.png" alt="" class="comparador-titulo-icone" aria-hidden="true">
-                            <span>Distribuição de Preços</span>
-                        </h5>
-                        <div class="comparador-grafico comparador-grafico-secundario">
-                            <canvas id="graficoDistribuicao"></canvas>
                         </div>
                     </div>
                 </div>
@@ -208,7 +202,7 @@
     <script src="assets/js/perfil.js?v=20260507-transicoes4"></script>
     <script src="assets/js/pesquisa-rapida.js?v=20260507-opt1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="assets/js/comparador.js?v=20260507-scroll-y"></script>
+    <script src="assets/js/comparador.js?v=20260507-produto-combo"></script>
 
 </body>
 

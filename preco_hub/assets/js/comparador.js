@@ -2,7 +2,8 @@ const API_LISTAR = "backend/produtos/listar.php";
 const API_LISTA_LISTAR = "backend/listas/listar.php";
 
 let produtosGlobal = [];
-let graficoPrecos, graficoEconomia, graficoDistribuicao;
+let graficoPrecos;
+let produtoSelecionadoId = null;
 
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
@@ -108,16 +109,6 @@ function destruirGraficos() {
         graficoPrecos.destroy();
         graficoPrecos = null;
     }
-
-    if (graficoEconomia) {
-        graficoEconomia.destroy();
-        graficoEconomia = null;
-    }
-
-    if (graficoDistribuicao) {
-        graficoDistribuicao.destroy();
-        graficoDistribuicao = null;
-    }
 }
 
 function atualizarResumoVazio() {
@@ -168,6 +159,253 @@ function obterMercados() {
     return mercados;
 }
 
+function obterProdutoSelecionado() {
+    if (produtosGlobal.length === 0) {
+        return null;
+    }
+
+    const produto = produtosGlobal.find(function (item) {
+        return Number(item.id_produto) === Number(produtoSelecionadoId);
+    });
+
+    return produto || produtosGlobal[0];
+}
+
+function obterProdutosFiltradosComparacao() {
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+    const termo = normalizarTexto(campoBusca ? campoBusca.value : "");
+
+    if (!termo) {
+        return produtosGlobal;
+    }
+
+    return produtosGlobal.filter(function (produto) {
+        return normalizarTexto(produto.nome_produto).includes(termo);
+    });
+}
+
+function obterProdutoPorId(idProduto) {
+    return produtosGlobal.find(function (produto) {
+        return Number(produto.id_produto) === Number(idProduto);
+    }) || null;
+}
+
+function fecharSugestoesProdutos() {
+    const sugestoes = document.getElementById("produtoComparacaoSugestoes");
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+
+    if (sugestoes) {
+        sugestoes.classList.add("d-none");
+    }
+
+    if (campoBusca) {
+        campoBusca.setAttribute("aria-expanded", "false");
+    }
+}
+
+function renderizarSugestoesProdutos(produtos, abrir) {
+    const sugestoes = document.getElementById("produtoComparacaoSugestoes");
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+
+    if (!sugestoes) {
+        return;
+    }
+
+    sugestoes.innerHTML = "";
+
+    if (!abrir) {
+        fecharSugestoesProdutos();
+        return;
+    }
+
+    if (produtos.length === 0) {
+        sugestoes.innerHTML = '<div class="comparador-produto-vazio">Nenhum produto encontrado</div>';
+    } else {
+        produtos.forEach(function (produto) {
+            const botao = document.createElement("button");
+            const selecionado = Number(produto.id_produto) === Number(produtoSelecionadoId);
+
+            botao.type = "button";
+            botao.className = "comparador-produto-opcao" + (selecionado ? " is-active" : "");
+            botao.dataset.produtoId = String(produto.id_produto);
+            botao.setAttribute("role", "option");
+            botao.setAttribute("aria-selected", selecionado ? "true" : "false");
+            botao.textContent = produto.nome_produto || "Produto sem nome";
+            sugestoes.appendChild(botao);
+        });
+    }
+
+    sugestoes.classList.remove("d-none");
+
+    if (campoBusca) {
+        campoBusca.setAttribute("aria-expanded", "true");
+    }
+}
+
+function selecionarProdutoComparacao(idProduto, atualizarCampo) {
+    const produto = obterProdutoPorId(idProduto);
+    const seletor = document.getElementById("produtoComparacao");
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+
+    if (!produto) {
+        return false;
+    }
+
+    produtoSelecionadoId = Number(produto.id_produto);
+
+    if (seletor) {
+        seletor.value = String(produtoSelecionadoId);
+    }
+
+    if (campoBusca && atualizarCampo !== false) {
+        campoBusca.value = produto.nome_produto || "Produto sem nome";
+    }
+
+    gerarGraficos();
+    fecharSugestoesProdutos();
+    return true;
+}
+
+function preencherSeletorProdutos() {
+    const seletor = document.getElementById("produtoComparacao");
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+
+    if (!seletor) {
+        return false;
+    }
+
+    seletor.innerHTML = "";
+    if (campoBusca) {
+        campoBusca.disabled = produtosGlobal.length === 0;
+    }
+
+    if (produtosGlobal.length === 0) {
+        seletor.disabled = true;
+        renderizarSugestoesProdutos([], false);
+        return false;
+    }
+
+    produtosGlobal.forEach(function (produto) {
+        const opcao = document.createElement("option");
+        opcao.value = String(produto.id_produto);
+        opcao.textContent = produto.nome_produto || "Produto sem nome";
+        seletor.appendChild(opcao);
+    });
+
+    if (!obterProdutoPorId(produtoSelecionadoId)) {
+        produtoSelecionadoId = Number(produtosGlobal[0].id_produto);
+    }
+
+    seletor.disabled = false;
+    seletor.value = String(produtoSelecionadoId);
+
+    if (campoBusca) {
+        const produto = obterProdutoSelecionado();
+        campoBusca.value = produto ? produto.nome_produto || "Produto sem nome" : "";
+    }
+
+    renderizarSugestoesProdutos([], false);
+    return true;
+}
+
+function iniciarSeletorProduto() {
+    const seletor = document.getElementById("produtoComparacao");
+    const campoBusca = document.getElementById("buscaProdutoComparacao");
+    const botaoAbrir = document.getElementById("abrirProdutosComparacao");
+    const sugestoes = document.getElementById("produtoComparacaoSugestoes");
+    const combo = document.getElementById("produtoComparacaoCombo");
+
+    if (!seletor) {
+        return;
+    }
+
+    seletor.addEventListener("change", function () {
+        selecionarProdutoComparacao(seletor.value);
+    });
+
+    if (campoBusca) {
+        campoBusca.addEventListener("focus", function () {
+            campoBusca.select();
+            renderizarSugestoesProdutos(produtosGlobal, true);
+        });
+
+        campoBusca.addEventListener("input", function () {
+            const produtosFiltrados = obterProdutosFiltradosComparacao();
+
+            renderizarSugestoesProdutos(produtosFiltrados, true);
+
+            if (produtosFiltrados.length > 0) {
+                selecionarProdutoComparacao(produtosFiltrados[0].id_produto, false);
+                renderizarSugestoesProdutos(produtosFiltrados, true);
+            }
+        });
+
+        campoBusca.addEventListener("keydown", function (evento) {
+            const primeiroProduto = obterProdutosFiltradosComparacao()[0];
+
+            if (evento.key === "Enter" && primeiroProduto) {
+                evento.preventDefault();
+                selecionarProdutoComparacao(primeiroProduto.id_produto);
+            }
+
+            if (evento.key === "Escape") {
+                fecharSugestoesProdutos();
+            }
+        });
+    }
+
+    if (botaoAbrir) {
+        botaoAbrir.addEventListener("mousedown", function (evento) {
+            evento.preventDefault();
+
+            if (sugestoes && sugestoes.classList.contains("d-none")) {
+                if (campoBusca) {
+                    campoBusca.focus();
+                }
+                renderizarSugestoesProdutos(produtosGlobal, true);
+                return;
+            }
+
+            fecharSugestoesProdutos();
+        });
+    }
+
+    if (sugestoes) {
+        sugestoes.addEventListener("mousedown", function (evento) {
+            const botao = evento.target.closest("[data-produto-id]");
+
+            if (!botao) {
+                return;
+            }
+
+            evento.preventDefault();
+            selecionarProdutoComparacao(botao.dataset.produtoId);
+        });
+    }
+
+    document.addEventListener("mousedown", function (evento) {
+        if (combo && !combo.contains(evento.target)) {
+            fecharSugestoesProdutos();
+        }
+    });
+}
+
+function obterPrecosProdutoOrdenados(produto) {
+    return normalizarPrecos(produto ? produto.precos : [])
+        .filter(function (preco) {
+            return String(preco.mercado || "").trim() !== "";
+        })
+        .sort(function (a, b) {
+            if (a.preco !== b.preco) {
+                return a.preco - b.preco;
+            }
+
+            return String(a.mercado).localeCompare(String(b.mercado), "pt-BR", {
+                sensitivity: "base"
+            });
+        });
+}
+
 function obterCor(indice) {
     const cores = [
         "#2563EB",
@@ -178,6 +416,23 @@ function obterCor(indice) {
         "#14B8A6",
         "#EC4899",
         "#64748B"
+    ];
+
+    return cores[indice % cores.length];
+}
+
+function obterCorPontoGrafico(indice) {
+    const cores = [
+        "#DC2626",
+        "#2563EB",
+        "#16A34A",
+        "#9333EA",
+        "#EA580C",
+        "#0891B2",
+        "#DB2777",
+        "#4F46E5",
+        "#B45309",
+        "#0F766E"
     ];
 
     return cores[indice % cores.length];
@@ -244,7 +499,7 @@ function obterNomeProdutoPorIndice(indice) {
     return produto ? produto.nome_produto : "";
 }
 
-function ajustarAreaGraficoPrecos(totalProdutos) {
+function ajustarAreaGraficoPrecos(totalPontos) {
     const area = document.getElementById("areaGraficoPrecos");
 
     if (!area) {
@@ -252,17 +507,7 @@ function ajustarAreaGraficoPrecos(totalProdutos) {
     }
 
     const larguraVisivel = area.parentElement ? area.parentElement.clientWidth : 0;
-    area.style.width = Math.max(larguraVisivel, 900, totalProdutos * 86) + "px";
-}
-
-function ajustarAreaGraficoEconomia(totalProdutos) {
-    const area = document.getElementById("areaGraficoEconomia");
-
-    if (!area) {
-        return;
-    }
-
-    area.style.height = Math.max(360, totalProdutos * 32) + "px";
+    area.style.width = Math.max(larguraVisivel, 760, totalPontos * 170) + "px";
 }
 
 function gerarCabecalhoTabela(mercados) {
@@ -318,12 +563,12 @@ function obterOpcoesBase(eixoValor) {
         maintainAspectRatio: false,
         resizeDelay: 120,
         interaction: {
-            mode: "nearest",
+            mode: "index",
             intersect: false
         },
         plugins: {
             legend: {
-                position: "top",
+                position: "bottom",
                 labels: {
                     usePointStyle: true,
                     boxWidth: 10,
@@ -343,6 +588,12 @@ function obterOpcoesBase(eixoValor) {
                 },
                 bodyFont: {
                     size: 13
+                },
+                callbacks: {
+                    label: function (context) {
+                        const valor = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+                        return context.dataset.label + ": " + (eixoValor === "preco" ? formatarPreco(valor) : valor);
+                    }
                 }
             }
         },
@@ -363,9 +614,10 @@ function obterOpcoesBase(eixoValor) {
             },
             y: {
                 beginAtZero: true,
-                grace: "12%",
+                grace: "14%",
                 grid: {
-                    color: "rgba(148, 163, 184, 0.22)"
+                    color: "rgba(148, 163, 184, 0.18)",
+                    borderDash: [4, 4]
                 },
                 ticks: {
                     color: "#475569",
@@ -377,116 +629,60 @@ function obterOpcoesBase(eixoValor) {
                     }
                 }
             }
+        },
+        elements: {
+            line: {
+                borderJoinStyle: "round",
+                borderCapStyle: "round"
+            }
         }
     };
 }
 
-function criarOpcoesGraficoPrecos() {
+function criarOpcoesGraficoPrecos(produto, precosOrdenados) {
     const opcoes = obterOpcoesBase("preco");
+    const valores = precosOrdenados.map(function (preco) {
+        return preco.preco;
+    });
 
     opcoes.plugins.legend.position = "bottom";
+    opcoes.plugins.legend.labels.generateLabels = function (chart) {
+        return Chart.defaults.plugins.legend.labels.generateLabels(chart).map(function (label) {
+            label.fillStyle = "#111827";
+            label.strokeStyle = "#111827";
+            return label;
+        });
+    };
     opcoes.plugins.tooltip.callbacks = {
         title: function (items) {
-            if (!items.length) {
+            if (!items.length || !produto) {
                 return "";
             }
 
-            return obterNomeProdutoPorIndice(items[0].dataIndex);
+            return produto.nome_produto || "Produto";
         },
         label: function (context) {
-            return context.dataset.label + ": " + formatarPreco(context.parsed.y);
+            return context.label + ": " + formatarPreco(context.parsed.y);
         }
     };
-    opcoes.scales.x.ticks.callback = function (_, index) {
-        return quebrarRotuloProduto(obterNomeProdutoPorIndice(index));
+    opcoes.scales.x.ticks.callback = function (value) {
+        return abreviarTexto(this.getLabelForValue(value), 18);
     };
     opcoes.scales.x.ticks.maxRotation = 0;
     opcoes.scales.x.ticks.minRotation = 0;
+    opcoes.scales.y.beginAtZero = false;
+
+    if (valores.length > 0) {
+        const menorValor = Math.min(...valores);
+        const maiorValor = Math.max(...valores);
+        const diferenca = maiorValor - menorValor;
+        const margem = diferenca > 0 ? diferenca * 0.35 : Math.max(menorValor * 0.04, 1);
+
+        opcoes.scales.y.suggestedMin = Math.max(0, menorValor - margem);
+        opcoes.scales.y.suggestedMax = maiorValor + margem;
+    }
 
     return opcoes;
-}
-
-function criarOpcoesGraficoEconomia() {
-    return {
-        indexAxis: "y",
-        responsive: true,
-        maintainAspectRatio: false,
-        resizeDelay: 120,
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                backgroundColor: "#0F172A",
-                padding: 12,
-                callbacks: {
-                    label: function (context) {
-                        return formatarPreco(context.parsed.x);
-                    }
-                }
-            }
-        },
-        scales: {
-            x: {
-                beginAtZero: true,
-                grace: "12%",
-                grid: {
-                    color: "rgba(148, 163, 184, 0.22)"
-                },
-                ticks: {
-                    color: "#475569",
-                    callback: function (value) {
-                        return "R$ " + value.toFixed(2);
-                    }
-                }
-            },
-            y: {
-                grid: {
-                    display: false
-                },
-                ticks: {
-                    color: "#475569",
-                    font: {
-                        size: 12,
-                        weight: "600"
-                    },
-                    callback: function (_, index) {
-                        return abreviarTexto(obterNomeProdutoPorIndice(index), 24);
-                    }
-                }
-            }
-        }
-    };
-}
-
-function criarOpcoesGraficoDistribuicao() {
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "58%",
-        plugins: {
-            legend: {
-                position: "bottom",
-                labels: {
-                    usePointStyle: true,
-                    padding: 16,
-                    font: {
-                        size: 13,
-                        weight: "600"
-                    }
-                }
-            },
-            tooltip: {
-                backgroundColor: "#0F172A",
-                padding: 12,
-                callbacks: {
-                    label: function (context) {
-                        return "Preco medio: " + formatarPreco(context.parsed);
-                    }
-                }
-            }
-        }
-    };
 }
 
 async function carregarProdutos() {
@@ -521,6 +717,7 @@ async function carregarProdutos() {
         }
 
         ocultarMensagem();
+        preencherSeletorProdutos();
         gerarTabela();
         gerarGraficos();
         calcularEstatisticas();
@@ -588,112 +785,56 @@ function gerarTabela() {
 }
 
 function gerarGraficos() {
-    const mercados = obterMercados();
-    const nomesProdutos = produtosGlobal.map(p => abreviarNome(p.nome_produto));
-
     if (typeof Chart === "undefined") {
         console.error("Chart.js nao foi carregado.");
         return;
     }
 
-    if (produtosGlobal.length === 0 || mercados.length === 0) {
+    destruirGraficos();
+
+    const produto = obterProdutoSelecionado();
+    const precosOrdenados = obterPrecosProdutoOrdenados(produto);
+
+    if (!produto || precosOrdenados.length === 0) {
         return;
     }
 
-    ajustarAreaGraficoPrecos(produtosGlobal.length);
-    ajustarAreaGraficoEconomia(produtosGlobal.length);
+    ajustarAreaGraficoPrecos(precosOrdenados.length);
 
-    // Dados para gráfico de preços
     const dadosPrecos = {
-        labels: nomesProdutos,
-        datasets: mercados.map((mercado, idx) => {
-            const cor = obterCor(idx);
-            return {
-                label: mercado,
-                data: produtosGlobal.map(p => {
-                    const precos = normalizarPrecos(p.precos);
-                    const preco = precos.find(pr => pr.mercado === mercado);
-                    return preco ? preco.preco : null;
+        labels: precosOrdenados.map(function (preco) {
+            return preco.mercado;
+        }),
+        datasets: [
+            {
+                label: abreviarTexto(produto.nome_produto || "Produto", 42),
+                data: precosOrdenados.map(function (preco) {
+                    return preco.preco;
                 }),
-                borderColor: cor,
-                backgroundColor: cor + "CC",
-                borderWidth: 1,
-                borderRadius: 8,
-                borderSkipped: false,
-                maxBarThickness: 48
-            };
-        })
+                borderColor: "#111827",
+                backgroundColor: "rgba(17, 24, 39, 0.08)",
+                tension: 0.38,
+                fill: true,
+                spanGaps: false,
+                pointStyle: "circle",
+                pointRadius: 7,
+                pointHoverRadius: 10,
+                pointBackgroundColor: precosOrdenados.map(function (_, index) {
+                    return obterCorPontoGrafico(index);
+                }),
+                pointBorderColor: "#ffffff",
+                pointBorderWidth: 3,
+                borderWidth: 4,
+                cubicInterpolationMode: "monotone"
+            }
+        ]
     };
 
-    // Destruir gráficos anteriores se existirem
-    destruirGraficos();
-
-    // Gráfico de linhas - Preços
     const ctxPrecos = document.getElementById("graficoPrecos").getContext("2d");
     graficoPrecos = new Chart(ctxPrecos, {
-        type: "bar",
+        type: "line",
         data: dadosPrecos,
-        options: criarOpcoesGraficoPrecos()
-    });
-
-    // Gráfico de barras - Economia
-    const economias = produtosGlobal.map(p => calcularEconomia(p.precos));
-    const ctxEconomia = document.getElementById("graficoEconomia").getContext("2d");
-    graficoEconomia = new Chart(ctxEconomia, {
-        type: "bar",
-        data: {
-            labels: nomesProdutos,
-            datasets: [{
-                label: "Economia (R$)",
-                data: economias,
-                backgroundColor: "#22C55E",
-                borderColor: "#16A34A",
-                borderWidth: 2,
-                borderRadius: 8
-            }]
-        },
-        options: criarOpcoesGraficoEconomia()
-    });
-
-    // Gráfico de pizza - Distribuição média de preços
-    const precosMediosPorMercado = mercados.map(mercado => {
-        const precos = produtosGlobal
-            .flatMap(p => normalizarPrecos(p.precos))
-            .filter(pr => pr.mercado === mercado)
-            .map(pr => pr.preco);
-        return precos.length > 0 ? precos.reduce((a, b) => a + b) / precos.length : 0;
-    });
-
-    const ctxDistribuicao = document.getElementById("graficoDistribuicao").getContext("2d");
-    graficoDistribuicao = new Chart(ctxDistribuicao, {
-        type: "doughnut",
-        data: {
-            labels: mercados,
-            datasets: [{
-                data: precosMediosPorMercado,
-                backgroundColor: mercados.map(function (_, indice) {
-                    return obterCor(indice);
-                }),
-                borderColor: "#fff",
-                borderWidth: 2
-            }]
-        },
-        legacyOptions: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: "bottom"
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return "Preço médio: " + formatarPreco(context.parsed);
-                        }
-                    }
-                }
-            }
-        },
-        options: criarOpcoesGraficoDistribuicao()
+        options: criarOpcoesGraficoPrecos(produto, precosOrdenados)
     });
 }
 
@@ -736,4 +877,7 @@ function calcularEstatisticas() {
 }
 
 // Carregar ao iniciar
-document.addEventListener("DOMContentLoaded", carregarProdutos);
+document.addEventListener("DOMContentLoaded", function () {
+    iniciarSeletorProduto();
+    carregarProdutos();
+});
