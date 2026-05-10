@@ -219,6 +219,162 @@ function carregarXmlSeguro($conteudo, $mensagemErro)
     return $xml;
 }
 
+class LeitorZipXlsxSemExtensao
+{
+    private $dados = "";
+    private $entradas = [];
+
+    public function open($arquivo)
+    {
+        $dados = file_get_contents($arquivo);
+
+        if ($dados === false) {
+            return false;
+        }
+
+        $this->dados = $dados;
+        $this->entradas = [];
+        $this->carregarDiretorioCentral();
+
+        return true;
+    }
+
+    public function getFromName($nome)
+    {
+        $nome = str_replace("\\", "/", (string) $nome);
+
+        if (!isset($this->entradas[$nome])) {
+            return false;
+        }
+
+        $entrada = $this->entradas[$nome];
+
+        if (($entrada["flags"] & 1) === 1) {
+            throw new RuntimeException("XLSX protegido por senha nao e suportado.");
+        }
+
+        $cabecalhoLocal = substr($this->dados, $entrada["localOffset"], 30);
+
+        if (strlen($cabecalhoLocal) < 30) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        $cabecalho = unpack(
+            "Vsignature/vversionNeeded/vflags/vmethod/vmtime/vmdate/Vcrc/VcompressedSize/VuncompressedSize/vnameLength/vextraLength",
+            $cabecalhoLocal
+        );
+
+        if (($cabecalho["signature"] ?? 0) !== 0x04034b50) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        $inicioConteudo = $entrada["localOffset"] + 30 + $cabecalho["nameLength"] + $cabecalho["extraLength"];
+        $conteudoComprimido = substr($this->dados, $inicioConteudo, $entrada["compressedSize"]);
+
+        if (strlen($conteudoComprimido) < $entrada["compressedSize"]) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        if ($entrada["method"] === 0) {
+            return $conteudoComprimido;
+        }
+
+        if ($entrada["method"] === 8) {
+            if (!function_exists("gzinflate")) {
+                throw new RuntimeException("A extensao ZLIB do PHP e necessaria para importar XLSX sem ZIP.");
+            }
+
+            $conteudo = gzinflate($conteudoComprimido);
+
+            if ($conteudo === false) {
+                throw new RuntimeException("Nao foi possivel descompactar o arquivo XLSX.");
+            }
+
+            return $conteudo;
+        }
+
+        throw new RuntimeException("Metodo de compressao do XLSX nao suportado.");
+    }
+
+    public function close()
+    {
+        $this->dados = "";
+        $this->entradas = [];
+    }
+
+    private function carregarDiretorioCentral()
+    {
+        $eocdOffset = $this->localizarFimDiretorioCentral();
+        $eocd = substr($this->dados, $eocdOffset, 22);
+
+        if (strlen($eocd) < 22) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        $info = unpack(
+            "Vsignature/vdisk/vcentralDisk/ventriesDisk/ventries/VcentralSize/VcentralOffset/vcommentLength",
+            $eocd
+        );
+
+        if (($info["signature"] ?? 0) !== 0x06054b50) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        if ($info["centralOffset"] === 0xffffffff || $info["centralSize"] === 0xffffffff) {
+            throw new RuntimeException("XLSX em formato ZIP64 nao e suportado neste ambiente.");
+        }
+
+        $offset = $info["centralOffset"];
+
+        for ($i = 0; $i < $info["entries"]; $i++) {
+            $cabecalho = substr($this->dados, $offset, 46);
+
+            if (strlen($cabecalho) < 46) {
+                throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+            }
+
+            $entrada = unpack(
+                "Vsignature/vversionMade/vversionNeeded/vflags/vmethod/vmtime/vmdate/Vcrc/VcompressedSize/VuncompressedSize/vnameLength/vextraLength/vcommentLength/vdiskNumber/vinternalAttributes/VexternalAttributes/VlocalOffset",
+                $cabecalho
+            );
+
+            if (($entrada["signature"] ?? 0) !== 0x02014b50) {
+                throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+            }
+
+            if ($entrada["compressedSize"] === 0xffffffff || $entrada["localOffset"] === 0xffffffff) {
+                throw new RuntimeException("XLSX em formato ZIP64 nao e suportado neste ambiente.");
+            }
+
+            $nome = substr($this->dados, $offset + 46, $entrada["nameLength"]);
+            $nome = str_replace("\\", "/", $nome);
+
+            $this->entradas[$nome] = [
+                "flags" => $entrada["flags"],
+                "method" => $entrada["method"],
+                "compressedSize" => $entrada["compressedSize"],
+                "localOffset" => $entrada["localOffset"]
+            ];
+
+            $offset += 46 + $entrada["nameLength"] + $entrada["extraLength"] + $entrada["commentLength"];
+        }
+    }
+
+    private function localizarFimDiretorioCentral()
+    {
+        $tamanho = strlen($this->dados);
+        $janela = min($tamanho, 65557);
+        $trecho = substr($this->dados, $tamanho - $janela);
+        $posicao = strrpos($trecho, "\x50\x4b\x05\x06");
+
+        if ($posicao === false) {
+            throw new RuntimeException("Arquivo XLSX invalido ou corrompido.");
+        }
+
+        return ($tamanho - $janela) + $posicao;
+    }
+}
+
 function carregarStringsCompartilhadas($zip)
 {
     $conteudo = $zip->getFromName("xl/sharedStrings.xml");
@@ -311,63 +467,117 @@ function obterValorCelulaXlsx($cell, $stringsCompartilhadas)
     return "";
 }
 
-function carregarXlsx($arquivo)
+function descreverErroAberturaZipArchive($codigo)
 {
-    if (!class_exists("ZipArchive")) {
-        jsonResponse(false, "A extensao ZIP do PHP e necessaria para importar XLSX.", null, 500);
+    if (!is_int($codigo)) {
+        return "erro desconhecido";
     }
 
-    $zip = new ZipArchive();
+    $erros = [
+        "ER_EXISTS" => "o arquivo ja existe",
+        "ER_INCONS" => "arquivo ZIP inconsistente",
+        "ER_INVAL" => "argumento invalido",
+        "ER_MEMORY" => "memoria insuficiente",
+        "ER_NOENT" => "arquivo nao encontrado",
+        "ER_NOZIP" => "arquivo nao e um ZIP/XLSX valido",
+        "ER_OPEN" => "nao foi possivel abrir o arquivo",
+        "ER_READ" => "erro de leitura",
+        "ER_SEEK" => "erro ao navegar no arquivo"
+    ];
 
-    if ($zip->open($arquivo) !== true) {
-        jsonResponse(false, "Erro ao abrir o arquivo XLSX.", null, 400);
+    foreach ($erros as $constante => $mensagem) {
+        $nomeConstante = "ZipArchive::" . $constante;
+
+        if (defined($nomeConstante) && constant($nomeConstante) === $codigo) {
+            return $mensagem;
+        }
     }
 
-    try {
-        $stringsCompartilhadas = carregarStringsCompartilhadas($zip);
-        $caminhoPlanilha = obterCaminhoPrimeiraPlanilha($zip);
-        $conteudoPlanilha = $zip->getFromName($caminhoPlanilha);
+    return "codigo de erro " . $codigo;
+}
 
-        if ($conteudoPlanilha === false) {
-            throw new RuntimeException("Nao foi possivel localizar a primeira aba do XLSX.");
+function carregarLinhasXlsxComLeitor($zip)
+{
+    $stringsCompartilhadas = carregarStringsCompartilhadas($zip);
+    $caminhoPlanilha = obterCaminhoPrimeiraPlanilha($zip);
+    $conteudoPlanilha = $zip->getFromName($caminhoPlanilha);
+
+    if ($conteudoPlanilha === false) {
+        throw new RuntimeException("Nao foi possivel localizar a primeira aba do XLSX.");
+    }
+
+    $xml = carregarXmlSeguro($conteudoPlanilha, "Nao foi possivel ler a primeira aba do XLSX.");
+
+    $xml->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+    $rows = $xml->xpath("//m:sheetData/m:row");
+    $linhas = [];
+
+    foreach ($rows as $row) {
+        $row->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+        $cells = $row->xpath("m:c");
+        $linha = [];
+        $maiorIndice = -1;
+
+        foreach ($cells as $cell) {
+            $indice = colunaParaIndice((string) $cell["r"]);
+            $linha[$indice] = obterValorCelulaXlsx($cell, $stringsCompartilhadas);
+            $maiorIndice = max($maiorIndice, $indice);
         }
 
-        $xml = carregarXmlSeguro($conteudoPlanilha, "Nao foi possivel ler a primeira aba do XLSX.");
-
-        $xml->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
-        $rows = $xml->xpath("//m:sheetData/m:row");
-        $linhas = [];
-
-        foreach ($rows as $row) {
-            $row->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
-            $cells = $row->xpath("m:c");
-            $linha = [];
-            $maiorIndice = -1;
-
-            foreach ($cells as $cell) {
-                $indice = colunaParaIndice((string) $cell["r"]);
-                $linha[$indice] = obterValorCelulaXlsx($cell, $stringsCompartilhadas);
-                $maiorIndice = max($maiorIndice, $indice);
-            }
-
-            if ($maiorIndice < 0) {
-                $linhas[] = [];
-                continue;
-            }
-
-            $linhaCompleta = [];
-
-            for ($i = 0; $i <= $maiorIndice; $i++) {
-                $linhaCompleta[] = removerBom($linha[$i] ?? "");
-            }
-
-            $linhas[] = $linhaCompleta;
+        if ($maiorIndice < 0) {
+            $linhas[] = [];
+            continue;
         }
-    } finally {
-        $zip->close();
+
+        $linhaCompleta = [];
+
+        for ($i = 0; $i <= $maiorIndice; $i++) {
+            $linhaCompleta[] = removerBom($linha[$i] ?? "");
+        }
+
+        $linhas[] = $linhaCompleta;
     }
 
     return $linhas;
+}
+
+function carregarXlsxComLeitor($zip, $arquivo)
+{
+    $resultado = $zip->open($arquivo);
+
+    if ($resultado !== true) {
+        $detalhe = is_a($zip, "ZipArchive") ? descreverErroAberturaZipArchive($resultado) : "nao foi possivel ler o arquivo";
+        throw new RuntimeException($detalhe);
+    }
+
+    try {
+        return carregarLinhasXlsxComLeitor($zip);
+    } finally {
+        $zip->close();
+    }
+}
+
+function carregarXlsx($arquivo)
+{
+    $erroZipArchive = null;
+
+    if (class_exists("ZipArchive")) {
+        try {
+            return carregarXlsxComLeitor(new ZipArchive(), $arquivo);
+        } catch (Throwable $e) {
+            $erroZipArchive = $e->getMessage();
+        }
+    }
+
+    try {
+        return carregarXlsxComLeitor(new LeitorZipXlsxSemExtensao(), $arquivo);
+    } catch (Throwable $e) {
+        if ($erroZipArchive !== null) {
+            throw new RuntimeException("ZipArchive falhou (" . $erroZipArchive . ") e o leitor alternativo tambem falhou (" . $e->getMessage() . ").");
+        }
+
+        throw $e;
+    }
 }
 
 function carregarLinhasImportacao($arquivo, $extensao)
