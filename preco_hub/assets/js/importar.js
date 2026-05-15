@@ -33,11 +33,17 @@ async function importarCSV(event) {
         }
 
         resultado.className = "alert alert-success";
+        const avisoImagem = !data.data.coluna_imagem_detectada && (data.data.imagens_vinculadas || 0) === 0
+            ? "<br><small>Nenhuma coluna foto/imagem foi detectada.</small>"
+            : "";
         resultado.innerHTML = `
             <strong>Importacao concluida.</strong><br>
             Inseridos: ${data.data.produtos_inseridos}<br>
             Atualizados: ${data.data.produtos_atualizados}<br>
-            Linhas com erro: ${data.data.linhas_com_erro}
+            Linhas com erro: ${data.data.linhas_com_erro}<br>
+            Imagens vinculadas: ${data.data.imagens_vinculadas || 0}<br>
+            Imagens salvas: ${data.data.imagens_salvas || 0}<br>
+            Imagens ignoradas: ${data.data.imagens_ignoradas || 0}${avisoImagem}
         `;
     } catch (error) {
         console.error(error);

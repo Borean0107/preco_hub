@@ -153,7 +153,7 @@ CREATE TABLE `produto` (
   `id_produto` int(11) NOT NULL,
   `nome_produto` varchar(150) NOT NULL,
   `descricao_produto` text DEFAULT NULL,
-  `imagem_produto` varchar(255) NOT NULL,
+  `imagem_produto` text NOT NULL,
   `codigo_barras_produto` varchar(50) DEFAULT NULL,
   `destaque_produto` tinyint(1) NOT NULL DEFAULT 0,
   `fk_categoria_id_categoria` int(11) NOT NULL,

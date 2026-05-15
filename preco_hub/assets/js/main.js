@@ -21,6 +21,35 @@ function normalizarTexto(texto) {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
+const LOGOS_MERCADOS = {
+    "delta": "assets/img/logo%20mercados/Logo%20Delta.png",
+    "favetta": "assets/img/logo%20mercados/Logo%20Favetta.png",
+    "pague menos": "assets/img/logo%20mercados/Logo%20Pague%20Menos.png",
+    "savegnago": "assets/img/logo%20mercados/Logo%20Savegnago.png"
+};
+
+function normalizarChaveMercado(nomeMercado) {
+    return normalizarTexto(nomeMercado || "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterLogoMercado(nomeMercado) {
+    return LOGOS_MERCADOS[normalizarChaveMercado(nomeMercado)] || "";
+}
+
+function renderizarNomeMercadoComLogo(nomeMercado) {
+    const mercadoSeguro = escaparHtml(nomeMercado || "Mercado");
+    const logoMercado = obterLogoMercado(nomeMercado);
+
+    return `
+        <span class="mercado-nome-com-logo">
+            ${logoMercado ? `<img src="${logoMercado}" class="mercado-logo-card" alt="" loading="lazy" decoding="async" aria-hidden="true">` : ""}
+            <span>${mercadoSeguro}</span>
+        </span>
+    `;
+}
+
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
         style: "currency",
@@ -251,6 +280,7 @@ async function buscarProdutosDoBackend() {
             return {
                 id_produto: produto.id_produto,
                 nome: produto.nome_produto,
+                marca: produto.nome_fabricante || "",
                 imagem: produto.imagem_produto,
                 categoria: produto.nome_categoria || "",
                 destaque: produtoEstaEmDestaque(produto),
@@ -477,10 +507,11 @@ function filtrarProdutos() {
 
     produtos.forEach(function (produto) {
         const nome = normalizarTexto(produto.dataset.nome || "");
+        const marcaProduto = normalizarTexto(produto.dataset.marca || "");
         const categoriaProduto = normalizarTexto(produto.dataset.categoria || "");
         const emDestaque = produto.dataset.destaque === "1";
-        const correspondeAoTexto = termo === "" || nome.indexOf(termo) !== -1;
-        const correspondeACategoria = emDestaque || categoria === "" || categoriaProduto === categoria;
+        const correspondeAoTexto = termo === "" || nome.indexOf(termo) !== -1 || marcaProduto.indexOf(termo) !== -1;
+        const correspondeACategoria = categoria === "" || categoriaProduto === categoria;
         const sinalizacaoFiltrado = produto.querySelector(".product-filter-badge");
 
         if (correspondeAoTexto && correspondeACategoria) {
@@ -493,7 +524,7 @@ function filtrarProdutos() {
         }
     });
 
-    alternarVisibilidadeAnimada(mensagem, false);
+    alternarVisibilidadeAnimada(mensagem, (termo !== "" || categoria !== "") && encontrados === 0);
 
     atualizarMensagensSecoes();
 }
@@ -660,6 +691,7 @@ function criarCardProduto(produto) {
     const coluna = document.createElement("div");
     coluna.className = "col-md-6 col-lg-4 produto-item";
     coluna.dataset.nome = normalizarTexto(produto.nome || "");
+    coluna.dataset.marca = normalizarTexto(produto.marca || produto.nome_fabricante || "");
     coluna.dataset.categoria = produto.categoria || produto.nome_categoria || "";
     coluna.dataset.destaque = produtoEstaEmDestaque(produto) ? "1" : "0";
 
@@ -670,6 +702,7 @@ function criarCardProduto(produto) {
     const melhorPreco = precosOrdenados[0];
     const temPrecos = Boolean(melhorPreco);
     const nomeSeguro = escaparHtml(produto.nome || "Produto sem nome");
+    const marcaSeguro = escaparHtml(produto.marca || produto.nome_fabricante || "Marca nao informada");
     const imagemSeguro = escaparHtml(produto.imagem || "assets/img/logo/logo.png");
     const destaque = produtoEstaEmDestaque(produto);
 
@@ -680,13 +713,13 @@ function criarCardProduto(produto) {
             <img src="${imagemSeguro}" class="card-img-top" alt="${nomeSeguro}" loading="lazy" decoding="async">
             <div class="card-body">
                 <h5 class="card-title">${nomeSeguro}</h5>
+                <p class="product-card-brand">${marcaSeguro}</p>
 
                 <ul class="list-group list-group-flush mt-3 price-list">
                     ${temPrecos ? precosOrdenados.map(function (item, index) {
-                        const mercadoSeguro = escaparHtml(item.mercado || "Mercado");
                         return `
                             <li class="list-group-item d-flex justify-content-between price-item ${index === 0 ? "lowest-price" : ""}" data-preco="${item.preco}">
-                                <span>${mercadoSeguro}</span>
+                                ${renderizarNomeMercadoComLogo(item.mercado || "Mercado")}
                                 <span>${formatarPreco(item.preco)}</span>
                             </li>
                         `;
@@ -743,37 +776,51 @@ function atualizarMensagensSecoes() {
     const containerOutros = document.getElementById("listaProdutosOutros");
     const mensagemDestaques = document.getElementById("mensagemSemDestaques");
     const mensagemOutros = document.getElementById("mensagemSemOutros");
+    const cabecalhoDestaques = document.getElementById("cabecalhoProdutosDestaque");
+    const cabecalhoOutros = document.getElementById("cabecalhoProdutosOutros");
+    let destaquesVisiveis = [];
+    let outrosVisiveis = [];
+
+    document.body.classList.toggle("filtro-produtos-ativo", filtroAtivo);
 
     if (mensagemDestaques && containerDestaques) {
         const destaques = Array.from(containerDestaques.querySelectorAll(".produto-item"));
-        const destaquesVisiveis = destaques.filter(function (produto) {
+        destaquesVisiveis = destaques.filter(function (produto) {
             return produto.dataset.filtroVisivel !== "0" && produto.style.display !== "none";
         });
 
         if (destaques.length === 0) {
             mensagemDestaques.textContent = "Nenhum produto marcado como destaque.";
-            alternarVisibilidadeAnimada(mensagemDestaques, true);
+            alternarVisibilidadeAnimada(mensagemDestaques, !filtroAtivo);
         } else {
             mensagemDestaques.textContent = "Nenhum destaque encontrado para esta busca.";
-            alternarVisibilidadeAnimada(mensagemDestaques, termo !== "" && destaquesVisiveis.length === 0);
+            alternarVisibilidadeAnimada(mensagemDestaques, false);
         }
     }
 
     if (mensagemOutros && containerOutros) {
         const outros = Array.from(containerOutros.querySelectorAll(".produto-item"));
-        const outrosVisiveis = outros.filter(function (produto) {
+        outrosVisiveis = outros.filter(function (produto) {
             return produto.dataset.filtroVisivel !== "0" && produto.style.display !== "none";
         });
 
         if (outros.length === 0) {
             mensagemOutros.textContent = "Nenhum outro produto cadastrado.";
-            alternarVisibilidadeAnimada(mensagemOutros, true);
+            alternarVisibilidadeAnimada(mensagemOutros, !filtroAtivo);
         } else {
             mensagemOutros.textContent = filtroAtivo
                 ? "Nenhum outro produto encontrado para este filtro."
                 : "Nenhum outro produto cadastrado.";
-            alternarVisibilidadeAnimada(mensagemOutros, filtroAtivo && outrosVisiveis.length === 0);
+            alternarVisibilidadeAnimada(mensagemOutros, false);
         }
+    }
+
+    if (cabecalhoDestaques) {
+        cabecalhoDestaques.classList.toggle("d-none", filtroAtivo);
+    }
+
+    if (cabecalhoOutros) {
+        cabecalhoOutros.classList.toggle("d-none", filtroAtivo);
     }
 }
 

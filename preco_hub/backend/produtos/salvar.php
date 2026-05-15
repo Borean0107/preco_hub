@@ -67,6 +67,7 @@ $caminhoArquivo = null;
 $imagemProduto = null;
 
 garantirColunaDestaqueProduto($pdo);
+garantirColunaImagemProdutoLonga($pdo);
 
 function removerImagemProdutoLocal($caminhoRelativo)
 {

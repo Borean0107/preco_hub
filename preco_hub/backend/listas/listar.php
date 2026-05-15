@@ -17,6 +17,7 @@ $sql = "
         CONCAT(lp.fk_lista_id_lista, '-', lp.fk_produto_id_produto) AS id_lista_produto,
         p.id_produto,
         p.nome_produto,
+        f.nome_fabricante,
         lp.quantidade,
         lp.comprado,
         m.nome_mercado,
@@ -24,6 +25,8 @@ $sql = "
     FROM lista_produto lp
     INNER JOIN produto p
         ON p.id_produto = lp.fk_produto_id_produto
+    LEFT JOIN fabricante f
+        ON f.id_fabricante = p.fk_fabricante_id_fabricante
     INNER JOIN mercado_produto mp
         ON mp.fk_produto_id_produto = p.id_produto
     INNER JOIN mercado m
@@ -48,6 +51,8 @@ $data = array_map(function ($item) {
         "id_lista_produto" => $item["id_lista_produto"],
         "id_produto" => (int) $item["id_produto"],
         "nome" => $item["nome_produto"],
+        "marca" => $item["nome_fabricante"],
+        "nome_fabricante" => $item["nome_fabricante"],
         "quantidade" => (int) $item["quantidade"],
         "comprado" => (bool) $item["comprado"],
         "mercado" => $item["nome_mercado"],

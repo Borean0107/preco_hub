@@ -15,6 +15,13 @@ const ORDEM_MERCADOS = [
     "Pague Menos"
 ];
 
+const LOGOS_MERCADOS = {
+    "delta": "assets/img/logo%20mercados/Logo%20Delta.png",
+    "favetta": "assets/img/logo%20mercados/Logo%20Favetta.png",
+    "pague menos": "assets/img/logo%20mercados/Logo%20Pague%20Menos.png",
+    "savegnago": "assets/img/logo%20mercados/Logo%20Savegnago.png"
+};
+
 function formatarPreco(valor) {
     return Number(valor).toLocaleString("pt-BR", {
         style: "currency",
@@ -38,6 +45,22 @@ function normalizarTexto(texto) {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function obterLogoMercado(nomeMercado) {
+    return LOGOS_MERCADOS[normalizarTexto(nomeMercado)] || "";
+}
+
+function renderizarTituloMercadoComLogo(nomeMercado) {
+    const mercadoSeguro = escaparHtml(nomeMercado || "Mercado");
+    const logoMercado = obterLogoMercado(nomeMercado);
+
+    return `
+        <span class="mercado-titulo-com-logo">
+            ${logoMercado ? `<img src="${logoMercado}" class="mercado-logo-checklist" alt="" loading="lazy" decoding="async" aria-hidden="true">` : ""}
+            <span>${mercadoSeguro}</span>
+        </span>
+    `;
 }
 
 async function lerJsonSeguro(response) {
@@ -127,6 +150,7 @@ async function buscarLista() {
             id: item.id_lista_produto,
             id_produto: item.id_produto,
             nome: item.nome,
+            marca: item.marca || item.nome_fabricante || "",
             quantidade: Math.max(Number(item.quantidade) || 1, 1),
             preco: Number(item.preco) || 0,
             mercado: item.mercado || "Mercado",
@@ -657,7 +681,7 @@ async function renderizarLista() {
             blocoMercado = `
                 <div class="mercado-bloco mt-4 mb-2">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h5 class="text-marrom fw-bold mb-0">${escaparHtml(item.mercado)}</h5>
+                        <h5 class="text-marrom fw-bold mb-0">${renderizarTituloMercadoComLogo(item.mercado)}</h5>
                         <span class="badge-subtotal">
                             Subtotal: ${formatarPreco(subtotalMercado)}
                         </span>
@@ -686,7 +710,8 @@ async function renderizarLista() {
                     >
 
                     <label class="form-check-label ${item.comprado ? "text-decoration-line-through text-muted" : ""}">
-                        ${escaparHtml(item.nome)}
+                        <span class="lista-produto-nome">${escaparHtml(item.nome)}</span>
+                        ${item.marca ? `<small class="lista-produto-marca">${escaparHtml(item.marca)}</small>` : ""}
                     </label>
                 </div>
 

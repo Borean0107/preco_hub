@@ -245,6 +245,7 @@ function exibirResultados(produtos) {
 
         const precoMinimoFormatado = formatarPreco(melhorPreco.preco);
         const economiaFormatada = formatarPreco(economia);
+        const marcaSeguro = escaparHtml(produto.nome_fabricante || "Marca nao informada");
 
         let htmlPrecos = "";
         precos.forEach(function (p) {
@@ -283,7 +284,7 @@ function exibirResultados(produtos) {
                             <div class="flex-grow-1">
                                 <h6 class="fw-bold mb-1">${escaparHtml(produto.nome_produto)}</h6>
                                 <small class="text-muted d-block mb-2">
-                                    ${escaparHtml(produto.nome_fabricante || "N/A")} 
+                                    ${marcaSeguro}
                                     • ${escaparHtml(produto.nome_categoria || "N/A")}
                                 </small>
                                 
@@ -320,7 +321,8 @@ function exibirResultados(produtos) {
             <div id="modal-${produto.id_produto}" class="modal-comparador" style="display: none;">
                 <div class="modal-content-comparador">
                     <button type="button" class="close-modal fechar-modal-busca" data-modal="modal-${produto.id_produto}" aria-label="Fechar">&times;</button>
-                    <h5 class="fw-bold mb-4">${escaparHtml(produto.nome_produto)}</h5>
+                    <h5 class="fw-bold mb-1">${escaparHtml(produto.nome_produto)}</h5>
+                    <small class="text-muted d-block mb-4">${marcaSeguro}</small>
                     ${htmlPrecos}
                 </div>
             </div>

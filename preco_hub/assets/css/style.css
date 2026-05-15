@@ -821,7 +821,15 @@ main {
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--texto);
+    margin-bottom: 6px;
+}
+
+.product-card-brand {
     margin-bottom: 14px;
+    color: #64748B;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .product-card-badge {
@@ -885,6 +893,32 @@ main {
     border-left: 4px solid var(--verde);
 }
 
+.mercado-nome-com-logo,
+.mercado-titulo-com-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.product-card .mercado-logo-card,
+body[data-site="usuario"] .product-card .mercado-logo-card {
+    flex: 0 0 auto;
+    width: 26px !important;
+    height: 22px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    object-fit: contain !important;
+    background: transparent !important;
+}
+
+.mercado-logo-checklist {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 28px;
+    object-fit: contain;
+}
+
 .price-item span:last-child {
     font-weight: 600;
 }
@@ -893,6 +927,12 @@ main {
     margin-top: 56px;
     padding-top: 32px;
     border-top: 1px solid var(--borda);
+}
+
+body.filtro-produtos-ativo .produtos-secundarios {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .produtos-destaque-scroll {
@@ -998,6 +1038,21 @@ main {
 
 .item-lista:last-child {
     border-bottom: none;
+}
+
+.lista-produto-nome,
+.lista-produto-marca {
+    display: block;
+}
+
+.lista-produto-nome {
+    font-weight: 500;
+}
+
+.lista-produto-marca {
+    margin-top: 2px;
+    color: #64748B;
+    font-size: 0.88rem;
 }
 
 .lista-item-acoes .btn-group .btn {
@@ -1353,6 +1408,18 @@ table td {
 .comparador-produto-opcao.is-active {
     background: rgba(34, 197, 94, 0.12);
     color: #15803D;
+}
+
+.comparador-produto-nome,
+.comparador-produto-marca {
+    display: block;
+}
+
+.comparador-produto-marca {
+    margin-top: 2px;
+    color: #64748B;
+    font-size: 0.82rem;
+    font-weight: 500;
 }
 
 .comparador-produto-vazio {

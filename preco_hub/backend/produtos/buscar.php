@@ -10,6 +10,7 @@ $precoMax = filter_var($_GET["preco_max"] ?? 999999, FILTER_VALIDATE_FLOAT);
 $mercado = trim($_GET["mercado"] ?? "");
 
 garantirColunaDestaqueProduto($pdo);
+garantirColunaImagemProdutoLonga($pdo);
 
 if (strlen($termo) < 2) {
     jsonResponse(true, "Nenhum resultado.", [], 200);

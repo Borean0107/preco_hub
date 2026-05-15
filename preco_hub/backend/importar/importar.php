@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../middleware/admin.php";
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../helpers/response.php";
+require_once __DIR__ . "/../helpers/produto_schema.php";
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     jsonResponse(false, "Metodo nao permitido.", null, 405);
@@ -20,6 +21,11 @@ if (!in_array($extensao, ["csv", "xlsx"], true)) {
 }
 
 $arquivo = $_FILES["arquivo"]["tmp_name"];
+
+define("IMPORTACAO_IMAGEM_PADRAO_PRODUTO", "assets/img/logo/logo.png");
+define("IMPORTACAO_DIRETORIO_IMAGENS_PRODUTOS", __DIR__ . "/../../assets/img/produtos/");
+define("IMPORTACAO_CAMINHO_WEB_IMAGENS_PRODUTOS", "assets/img/produtos/");
+define("IMPORTACAO_TAMANHO_MAXIMO_IMAGEM", 2 * 1024 * 1024);
 
 function detectarDelimitador($linha)
 {
@@ -61,6 +67,365 @@ function normalizarPrecoImportado($valor)
     }
 
     return $preco;
+}
+
+function normalizarCabecalhoImportacao($valor)
+{
+    $valor = trim(removerBom($valor));
+    $valor = strtr($valor, [
+        "Á" => "A", "À" => "A", "Â" => "A", "Ã" => "A", "Ä" => "A",
+        "á" => "a", "à" => "a", "â" => "a", "ã" => "a", "ä" => "a",
+        "É" => "E", "È" => "E", "Ê" => "E", "Ë" => "E",
+        "é" => "e", "è" => "e", "ê" => "e", "ë" => "e",
+        "Í" => "I", "Ì" => "I", "Î" => "I", "Ï" => "I",
+        "í" => "i", "ì" => "i", "î" => "i", "ï" => "i",
+        "Ó" => "O", "Ò" => "O", "Ô" => "O", "Õ" => "O", "Ö" => "O",
+        "ó" => "o", "ò" => "o", "ô" => "o", "õ" => "o", "ö" => "o",
+        "Ú" => "U", "Ù" => "U", "Û" => "U", "Ü" => "U",
+        "ú" => "u", "ù" => "u", "û" => "u", "ü" => "u",
+        "Ç" => "C", "ç" => "c"
+    ]);
+    $valor = strtolower($valor);
+    $valor = preg_replace('/[^a-z0-9]+/', "_", $valor);
+
+    return trim($valor, "_");
+}
+
+function cabecalhoEhImagem($valor)
+{
+    return in_array(normalizarCabecalhoImportacao($valor), [
+        "imagem",
+        "imagens",
+        "foto",
+        "fotos",
+        "image",
+        "images",
+        "url",
+        "link",
+        "url_imagem",
+        "url_da_imagem",
+        "url_foto",
+        "url_da_foto",
+        "imagem_url",
+        "foto_url",
+        "link_imagem",
+        "link_da_imagem",
+        "link_foto",
+        "link_da_foto",
+        "caminho_imagem",
+        "caminho_da_imagem",
+        "arquivo_imagem",
+        "arquivo_da_imagem",
+        "imagem_produto",
+        "foto_produto"
+    ], true);
+}
+
+function obterIndicesMercadosEImagem($header)
+{
+    $indiceImagem = null;
+    $indicesMercados = [];
+
+    for ($i = 3; $i < count($header); $i++) {
+        if ($indiceImagem === null && cabecalhoEhImagem($header[$i] ?? "")) {
+            $indiceImagem = $i;
+            continue;
+        }
+
+        $indicesMercados[] = $i;
+    }
+
+    return [$indicesMercados, $indiceImagem];
+}
+
+function valorPareceReferenciaImagem($valor)
+{
+    $valor = trim((string) $valor);
+
+    if ($valor === "") {
+        return false;
+    }
+
+    if (preg_match('/^data:image\/(?:jpeg|jpg|png|webp);base64,/i', $valor)) {
+        return true;
+    }
+
+    if (filter_var($valor, FILTER_VALIDATE_URL) && preg_match('/^https?:\/\//i', $valor)) {
+        return true;
+    }
+
+    $caminho = str_replace("\\", "/", $valor);
+
+    return strpos($caminho, "..") === false && preg_match('/\.(jpe?g|png|webp)(?:[?#].*)?$/i', $caminho);
+}
+
+function obterReferenciaImagemLinha($linha, $indiceColunaImagem)
+{
+    if ($indiceColunaImagem !== null) {
+        return [
+            "valor" => $linha[$indiceColunaImagem] ?? "",
+            "indice" => $indiceColunaImagem,
+            "detectada_por_cabecalho" => true
+        ];
+    }
+
+    for ($i = 3; $i < count($linha); $i++) {
+        if (valorPareceReferenciaImagem($linha[$i] ?? "")) {
+            return [
+                "valor" => $linha[$i],
+                "indice" => $i,
+                "detectada_por_cabecalho" => false
+            ];
+        }
+    }
+
+    return [
+        "valor" => "",
+        "indice" => null,
+        "detectada_por_cabecalho" => false
+    ];
+}
+
+function slugImagemProduto($nomeProduto)
+{
+    $nomeProduto = strtr(trim((string) $nomeProduto), [
+        "Á" => "A", "À" => "A", "Â" => "A", "Ã" => "A", "Ä" => "A",
+        "á" => "a", "à" => "a", "â" => "a", "ã" => "a", "ä" => "a",
+        "É" => "E", "È" => "E", "Ê" => "E", "Ë" => "E",
+        "é" => "e", "è" => "e", "ê" => "e", "ë" => "e",
+        "Í" => "I", "Ì" => "I", "Î" => "I", "Ï" => "I",
+        "í" => "i", "ì" => "i", "î" => "i", "ï" => "i",
+        "Ó" => "O", "Ò" => "O", "Ô" => "O", "Õ" => "O", "Ö" => "O",
+        "ó" => "o", "ò" => "o", "ô" => "o", "õ" => "o", "ö" => "o",
+        "Ú" => "U", "Ù" => "U", "Û" => "U", "Ü" => "U",
+        "ú" => "u", "ù" => "u", "û" => "u", "ü" => "u",
+        "Ç" => "C", "ç" => "c"
+    ]);
+    $nomeProduto = strtolower($nomeProduto);
+    $nomeProduto = preg_replace('/[^a-z0-9_-]+/', "_", $nomeProduto);
+    $nomeProduto = trim($nomeProduto, "_");
+
+    return $nomeProduto !== "" ? $nomeProduto : "produto";
+}
+
+function extensaoImagemPermitida($mimeType)
+{
+    $tipos = [
+        "image/jpeg" => "jpg",
+        "image/pjpeg" => "jpg",
+        "image/png" => "png",
+        "image/x-png" => "png",
+        "image/webp" => "webp"
+    ];
+
+    return $tipos[$mimeType] ?? null;
+}
+
+function detectarMimeImagem($conteudo)
+{
+    if (function_exists("finfo_open")) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo ? finfo_buffer($finfo, $conteudo) : false;
+
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
+        if ($mimeType) {
+            return $mimeType;
+        }
+    }
+
+    if (strncmp($conteudo, "\xFF\xD8\xFF", 3) === 0) {
+        return "image/jpeg";
+    }
+
+    if (strncmp($conteudo, "\x89PNG\x0D\x0A\x1A\x0A", 8) === 0) {
+        return "image/png";
+    }
+
+    if (strncmp($conteudo, "RIFF", 4) === 0 && substr($conteudo, 8, 4) === "WEBP") {
+        return "image/webp";
+    }
+
+    return "";
+}
+
+function garantirDiretorioImagensProdutos()
+{
+    if (!is_dir(IMPORTACAO_DIRETORIO_IMAGENS_PRODUTOS) && !mkdir(IMPORTACAO_DIRETORIO_IMAGENS_PRODUTOS, 0755, true)) {
+        throw new RuntimeException("Nao foi possivel criar diretorio de imagens dos produtos.");
+    }
+}
+
+function salvarConteudoImagemProduto($conteudo, $nomeProduto, $nomeOriginal = "")
+{
+    if (!is_string($conteudo) || $conteudo === "") {
+        throw new RuntimeException("Imagem vazia.");
+    }
+
+    if (strlen($conteudo) > IMPORTACAO_TAMANHO_MAXIMO_IMAGEM) {
+        throw new RuntimeException("Imagem maior que 2MB.");
+    }
+
+    $mimeType = detectarMimeImagem($conteudo);
+    $extensao = extensaoImagemPermitida($mimeType);
+
+    if ($extensao === null) {
+        throw new RuntimeException("Formato de imagem invalido.");
+    }
+
+    garantirDiretorioImagensProdutos();
+
+    $slug = slugImagemProduto($nomeProduto);
+    $sufixo = function_exists("random_bytes") ? bin2hex(random_bytes(4)) : uniqid();
+    $nomeArquivo = $slug . "_" . date("YmdHis") . "_" . $sufixo . "." . $extensao;
+    $caminhoCompleto = IMPORTACAO_DIRETORIO_IMAGENS_PRODUTOS . $nomeArquivo;
+
+    if (file_put_contents($caminhoCompleto, $conteudo) === false) {
+        throw new RuntimeException("Nao foi possivel salvar a imagem do produto.");
+    }
+
+    return IMPORTACAO_CAMINHO_WEB_IMAGENS_PRODUTOS . $nomeArquivo;
+}
+
+function arquivoLocalImagemExiste($caminhoRelativo)
+{
+    $caminhoRelativo = str_replace("\\", "/", trim((string) $caminhoRelativo));
+
+    if ($caminhoRelativo === "" || strpos($caminhoRelativo, "..") !== false) {
+        return false;
+    }
+
+    $base = realpath(__DIR__ . "/../../");
+    $caminhoCompleto = realpath(__DIR__ . "/../../" . ltrim($caminhoRelativo, "/"));
+
+    return $base && $caminhoCompleto && strpos($caminhoCompleto, $base . DIRECTORY_SEPARATOR) === 0 && is_file($caminhoCompleto);
+}
+
+function normalizarReferenciaImagemImportada($valor, $nomeProduto, &$arquivosImagensSalvas, &$imagemSalvaLocalmente)
+{
+    $valor = trim((string) $valor);
+
+    if ($valor === "") {
+        return null;
+    }
+
+    if (preg_match('/^data:image\/(?:jpeg|jpg|png|webp);base64,(.+)$/i', $valor, $matches)) {
+        $conteudo = base64_decode(preg_replace('/\s+/', "", $matches[1]), true);
+
+        if ($conteudo === false) {
+            return null;
+        }
+
+        $caminho = salvarConteudoImagemProduto($conteudo, $nomeProduto);
+        $arquivosImagensSalvas[] = $caminho;
+        $imagemSalvaLocalmente = true;
+
+        return $caminho;
+    }
+
+    if (filter_var($valor, FILTER_VALIDATE_URL) && preg_match('/^https?:\/\//i', $valor)) {
+        return $valor;
+    }
+
+    $caminho = str_replace("\\", "/", $valor);
+    $caminho = ltrim($caminho, "/");
+
+    if (strpos($caminho, "..") !== false || !preg_match('/\.(jpe?g|png|webp)$/i', $caminho)) {
+        return null;
+    }
+
+    $candidatos = [];
+
+    if (strpos($caminho, "assets/img/") === 0) {
+        $candidatos[] = $caminho;
+    } elseif (strpos($caminho, "img/") === 0) {
+        $candidatos[] = "assets/" . $caminho;
+    } elseif (strpos($caminho, "/") === false) {
+        $candidatos[] = IMPORTACAO_CAMINHO_WEB_IMAGENS_PRODUTOS . $caminho;
+    }
+
+    foreach ($candidatos as $candidato) {
+        if (arquivoLocalImagemExiste($candidato)) {
+            return $candidato;
+        }
+    }
+
+    return null;
+}
+
+function resolverImagemProdutoImportacao($valorImagem, $imagemEmbutida, $nomeProduto, &$arquivosImagensSalvas, &$imagemSalvaLocalmente, &$imagemIgnorada)
+{
+    $imagemSalvaLocalmente = false;
+    $imagemIgnorada = false;
+
+    if (trim((string) $valorImagem) !== "") {
+        try {
+            $referencia = normalizarReferenciaImagemImportada($valorImagem, $nomeProduto, $arquivosImagensSalvas, $imagemSalvaLocalmente);
+
+            if ($referencia) {
+                return $referencia;
+            }
+        } catch (Throwable $e) {
+            $imagemIgnorada = true;
+        }
+
+        $imagemIgnorada = true;
+    }
+
+    if (is_array($imagemEmbutida) && isset($imagemEmbutida["referencia"])) {
+        $imagemExternaSalva = false;
+
+        try {
+            $referenciaExterna = normalizarReferenciaImagemImportada($imagemEmbutida["referencia"], $nomeProduto, $arquivosImagensSalvas, $imagemExternaSalva);
+
+            if ($referenciaExterna) {
+                $imagemSalvaLocalmente = $imagemExternaSalva;
+                return $referenciaExterna;
+            }
+        } catch (Throwable $e) {
+            $imagemIgnorada = true;
+        }
+
+        $imagemIgnorada = true;
+    }
+
+    if (is_array($imagemEmbutida) && isset($imagemEmbutida["conteudo"])) {
+        try {
+            $caminho = salvarConteudoImagemProduto($imagemEmbutida["conteudo"], $nomeProduto, $imagemEmbutida["nome_original"] ?? "");
+            $arquivosImagensSalvas[] = $caminho;
+            $imagemSalvaLocalmente = true;
+
+            return $caminho;
+        } catch (Throwable $e) {
+            $imagemIgnorada = true;
+        }
+    }
+
+    return null;
+}
+
+function removerImagensSalvasImportacao($arquivosImagensSalvas)
+{
+    foreach ($arquivosImagensSalvas as $caminhoRelativo) {
+        $caminhoRelativo = str_replace("\\", "/", (string) $caminhoRelativo);
+
+        if (strpos($caminhoRelativo, IMPORTACAO_CAMINHO_WEB_IMAGENS_PRODUTOS) !== 0) {
+            continue;
+        }
+
+        $caminhoCompleto = realpath(__DIR__ . "/../../" . $caminhoRelativo);
+        $diretorioProdutos = realpath(IMPORTACAO_DIRETORIO_IMAGENS_PRODUTOS);
+
+        if (!$caminhoCompleto || !$diretorioProdutos || strpos($caminhoCompleto, $diretorioProdutos . DIRECTORY_SEPARATOR) !== 0) {
+            continue;
+        }
+
+        if (is_file($caminhoCompleto)) {
+            @unlink($caminhoCompleto);
+        }
+    }
 }
 
 function obterIdPorNome($pdo, $tabela, $colunaId, $colunaNome, $nome)
@@ -395,19 +760,210 @@ function carregarStringsCompartilhadas($zip)
     return $strings;
 }
 
-function normalizarCaminhoPlanilha($target)
+function normalizarCaminhoZip($baseArquivo, $target)
 {
-    $target = str_replace("\\", "/", (string) $target);
+    $target = str_replace("\\", "/", trim((string) $target));
 
-    if (strpos($target, "/xl/") === 0) {
-        return ltrim($target, "/");
+    if ($target === "") {
+        return "";
     }
 
     if (strpos($target, "/") === 0) {
-        return "xl" . $target;
+        $caminho = ltrim($target, "/");
+    } else {
+        $baseDir = str_replace("\\", "/", dirname((string) $baseArquivo));
+        $caminho = ($baseDir === "." || $baseDir === "") ? $target : $baseDir . "/" . $target;
     }
 
-    return "xl/" . ltrim($target, "/");
+    $partes = explode("/", $caminho);
+    $normalizado = [];
+
+    foreach ($partes as $parte) {
+        if ($parte === "" || $parte === ".") {
+            continue;
+        }
+
+        if ($parte === "..") {
+            array_pop($normalizado);
+            continue;
+        }
+
+        $normalizado[] = $parte;
+    }
+
+    return implode("/", $normalizado);
+}
+
+function normalizarCaminhoPlanilha($target)
+{
+    return normalizarCaminhoZip("xl/workbook.xml", $target);
+}
+
+function caminhoRelacionamentosXlsx($caminhoArquivo)
+{
+    $caminhoArquivo = str_replace("\\", "/", (string) $caminhoArquivo);
+    $diretorio = dirname($caminhoArquivo);
+    $nomeArquivo = basename($caminhoArquivo);
+
+    if ($diretorio === "." || $diretorio === "") {
+        return "_rels/" . $nomeArquivo . ".rels";
+    }
+
+    return $diretorio . "/_rels/" . $nomeArquivo . ".rels";
+}
+
+function carregarRelacionamentosXlsx($zip, $caminhoArquivo)
+{
+    $conteudo = $zip->getFromName(caminhoRelacionamentosXlsx($caminhoArquivo));
+
+    if ($conteudo === false) {
+        return [];
+    }
+
+    $xml = carregarXmlSeguro($conteudo, "Nao foi possivel ler os relacionamentos do XLSX.");
+    $relationships = $xml->children("http://schemas.openxmlformats.org/package/2006/relationships")->Relationship;
+    $resultado = [];
+
+    foreach ($relationships as $relationship) {
+        $id = (string) $relationship["Id"];
+        $target = (string) $relationship["Target"];
+        $targetMode = (string) $relationship["TargetMode"];
+
+        if ($id === "" || $target === "") {
+            continue;
+        }
+
+        $resultado[$id] = [
+            "type" => (string) $relationship["Type"],
+            "target" => strtolower($targetMode) === "external" ? $target : normalizarCaminhoZip($caminhoArquivo, $target),
+            "target_mode" => $targetMode
+        ];
+    }
+
+    return $resultado;
+}
+
+function obterAtributoRelacao($elemento, $nome)
+{
+    $atributos = $elemento->attributes("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+
+    return isset($atributos[$nome]) ? (string) $atributos[$nome] : "";
+}
+
+function registrarNamespacesDesenho($elemento)
+{
+    $elemento->registerXPathNamespace("xdr", "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing");
+    $elemento->registerXPathNamespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main");
+    $elemento->registerXPathNamespace("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+}
+
+function carregarImagensDoDesenhoXlsx($zip, $caminhoDesenho)
+{
+    $conteudo = $zip->getFromName($caminhoDesenho);
+
+    if ($conteudo === false) {
+        return [];
+    }
+
+    $xml = carregarXmlSeguro($conteudo, "Nao foi possivel ler as imagens do XLSX.");
+    registrarNamespacesDesenho($xml);
+    $anchors = $xml->xpath("//xdr:twoCellAnchor | //xdr:oneCellAnchor");
+
+    if (!$anchors) {
+        return [];
+    }
+
+    $relacionamentos = carregarRelacionamentosXlsx($zip, $caminhoDesenho);
+    $imagensPorLinha = [];
+
+    foreach ($anchors as $anchor) {
+        registrarNamespacesDesenho($anchor);
+        $rows = $anchor->xpath("xdr:from/xdr:row");
+        $blips = $anchor->xpath(".//a:blip");
+
+        if (!$rows || !$blips || !isset($rows[0])) {
+            continue;
+        }
+
+        $numeroLinha = ((int) $rows[0]) + 1;
+
+        if ($numeroLinha <= 0 || isset($imagensPorLinha[$numeroLinha])) {
+            continue;
+        }
+
+        foreach ($blips as $blip) {
+            $relId = obterAtributoRelacao($blip, "embed");
+
+            if ($relId === "") {
+                $relId = obterAtributoRelacao($blip, "link");
+            }
+
+            if ($relId === "" || !isset($relacionamentos[$relId])) {
+                continue;
+            }
+
+            $relacionamento = $relacionamentos[$relId];
+
+            if (strtolower($relacionamento["target_mode"] ?? "") === "external") {
+                $imagensPorLinha[$numeroLinha] = [
+                    "referencia" => $relacionamento["target"]
+                ];
+                break;
+            }
+
+            $caminhoImagem = $relacionamento["target"];
+            $conteudoImagem = $zip->getFromName($caminhoImagem);
+
+            if ($conteudoImagem === false) {
+                continue;
+            }
+
+            $imagensPorLinha[$numeroLinha] = [
+                "conteudo" => $conteudoImagem,
+                "nome_original" => basename($caminhoImagem)
+            ];
+            break;
+        }
+    }
+
+    return $imagensPorLinha;
+}
+
+function carregarImagensPlanilhaXlsx($zip, $caminhoPlanilha, $xmlPlanilha)
+{
+    $xmlPlanilha->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+    $drawings = $xmlPlanilha->xpath("//m:drawing");
+
+    if (!$drawings) {
+        return [];
+    }
+
+    $relacionamentosPlanilha = carregarRelacionamentosXlsx($zip, $caminhoPlanilha);
+    $imagensPorLinha = [];
+
+    foreach ($drawings as $drawing) {
+        $relId = obterAtributoRelacao($drawing, "id");
+
+        if ($relId === "" || !isset($relacionamentosPlanilha[$relId])) {
+            continue;
+        }
+
+        $relacionamento = $relacionamentosPlanilha[$relId];
+
+        if (strtolower($relacionamento["target_mode"] ?? "") === "external") {
+            continue;
+        }
+
+        $imagensDesenho = carregarImagensDoDesenhoXlsx($zip, $relacionamento["target"]);
+
+        foreach ($imagensDesenho as $linha => $imagem) {
+            if (!isset($imagensPorLinha[$linha])) {
+                $imagensPorLinha[$linha] = $imagem;
+            }
+        }
+    }
+
+    return $imagensPorLinha;
 }
 
 function obterCaminhoPrimeiraPlanilha($zip)
@@ -511,12 +1067,15 @@ function carregarLinhasXlsxComLeitor($zip)
     $xml->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
     $rows = $xml->xpath("//m:sheetData/m:row");
     $linhas = [];
+    $linhasPlanilha = [];
+    $imagensPorLinha = carregarImagensPlanilhaXlsx($zip, $caminhoPlanilha, $xml);
 
     foreach ($rows as $row) {
         $row->registerXPathNamespace("m", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
         $cells = $row->xpath("m:c");
         $linha = [];
         $maiorIndice = -1;
+        $numeroLinhaPlanilha = isset($row["r"]) ? (int) $row["r"] : count($linhas) + 1;
 
         foreach ($cells as $cell) {
             $indice = colunaParaIndice((string) $cell["r"]);
@@ -526,6 +1085,7 @@ function carregarLinhasXlsxComLeitor($zip)
 
         if ($maiorIndice < 0) {
             $linhas[] = [];
+            $linhasPlanilha[] = $numeroLinhaPlanilha;
             continue;
         }
 
@@ -536,9 +1096,14 @@ function carregarLinhasXlsxComLeitor($zip)
         }
 
         $linhas[] = $linhaCompleta;
+        $linhasPlanilha[] = $numeroLinhaPlanilha;
     }
 
-    return $linhas;
+    return [
+        "linhas" => $linhas,
+        "linhas_planilha" => $linhasPlanilha,
+        "imagens_por_linha" => $imagensPorLinha
+    ];
 }
 
 function carregarXlsxComLeitor($zip, $arquivo)
@@ -586,20 +1151,39 @@ function carregarLinhasImportacao($arquivo, $extensao)
         return carregarXlsx($arquivo);
     }
 
-    return carregarCsv($arquivo);
+    $linhas = carregarCsv($arquivo);
+    $linhasPlanilha = [];
+
+    foreach ($linhas as $indice => $_linha) {
+        $linhasPlanilha[] = $indice + 1;
+    }
+
+    return [
+        "linhas" => $linhas,
+        "linhas_planilha" => $linhasPlanilha,
+        "imagens_por_linha" => []
+    ];
 }
 
 try {
-    $linhas = carregarLinhasImportacao($arquivo, $extensao);
+    $dadosImportacao = carregarLinhasImportacao($arquivo, $extensao);
 } catch (Throwable $e) {
     jsonResponse(false, "Erro ao ler a planilha: " . $e->getMessage(), null, 400);
 }
 
+$linhas = $dadosImportacao["linhas"] ?? [];
+$linhasPlanilha = $dadosImportacao["linhas_planilha"] ?? [];
+$imagensPorLinha = $dadosImportacao["imagens_por_linha"] ?? [];
+
 while ($linhas && linhaEstaVazia($linhas[0])) {
     array_shift($linhas);
+    array_shift($linhasPlanilha);
 }
 
 $header = $linhas ? array_shift($linhas) : null;
+if ($linhasPlanilha) {
+    array_shift($linhasPlanilha);
+}
 
 if (!$header || count($header) < 4) {
     jsonResponse(false, "Formato invalido. Use: produto, marca, categoria e mercados.", null, 400);
@@ -609,14 +1193,27 @@ $header = array_map(function ($valor) {
     return trim(removerBom($valor));
 }, $header);
 
+[$indicesMercados, $indiceColunaImagem] = obterIndicesMercadosEImagem($header);
+
+if (count($indicesMercados) === 0) {
+    jsonResponse(false, "Formato invalido. Informe pelo menos uma coluna de mercado com preco.", null, 400);
+}
+
 $inseridos = 0;
 $atualizados = 0;
 $erros = 0;
+$imagensVinculadas = 0;
+$imagensSalvasLocalmente = 0;
+$imagensIgnoradas = 0;
+$imagensDetectadasAutomaticamente = 0;
+$arquivosImagensSalvas = [];
 
 try {
+    garantirColunaImagemProdutoLonga($pdo);
+
     $pdo->beginTransaction();
 
-    $stmtProduto = $pdo->prepare("SELECT id_produto FROM produto WHERE nome_produto = ? LIMIT 1");
+    $stmtProduto = $pdo->prepare("SELECT id_produto, imagem_produto FROM produto WHERE nome_produto = ? LIMIT 1");
     $stmtInserirProduto = $pdo->prepare("
         INSERT INTO produto (
             nome_produto,
@@ -630,7 +1227,8 @@ try {
     $stmtAtualizarProduto = $pdo->prepare("
         UPDATE produto
         SET fk_categoria_id_categoria = ?,
-            fk_fabricante_id_fabricante = ?
+            fk_fabricante_id_fabricante = ?,
+            imagem_produto = ?
         WHERE id_produto = ?
     ");
     $stmtPreco = $pdo->prepare("
@@ -645,11 +1243,12 @@ try {
             data_atualizacao_preco = NOW()
     ");
 
-    foreach ($linhas as $linha) {
+    foreach ($linhas as $indiceLinha => $linha) {
         if (linhaEstaVazia($linha)) {
             continue;
         }
 
+        $numeroLinhaPlanilha = $linhasPlanilha[$indiceLinha] ?? ($indiceLinha + 2);
         $nome = trim((string) ($linha[0] ?? ""));
         $marca = trim((string) ($linha[1] ?? ""));
         $categoria = trim((string) ($linha[2] ?? ""));
@@ -659,9 +1258,19 @@ try {
             continue;
         }
 
+        $referenciaImagemLinha = obterReferenciaImagemLinha($linha, $indiceColunaImagem);
+
+        if ($referenciaImagemLinha["indice"] !== null && !$referenciaImagemLinha["detectada_por_cabecalho"]) {
+            $imagensDetectadasAutomaticamente++;
+        }
+
         $precosValidos = [];
 
-        for ($i = 3; $i < count($header); $i++) {
+        foreach ($indicesMercados as $i) {
+            if ($referenciaImagemLinha["indice"] !== null && $i === $referenciaImagemLinha["indice"]) {
+                continue;
+            }
+
             $mercado = trim((string) ($header[$i] ?? ""));
             $preco = normalizarPrecoImportado($linha[$i] ?? "");
 
@@ -680,21 +1289,45 @@ try {
             continue;
         }
 
+        $imagemSalvaLocalmente = false;
+        $imagemIgnorada = false;
+        $imagemProduto = resolverImagemProdutoImportacao(
+            $referenciaImagemLinha["valor"],
+            $imagensPorLinha[$numeroLinhaPlanilha] ?? null,
+            $nome,
+            $arquivosImagensSalvas,
+            $imagemSalvaLocalmente,
+            $imagemIgnorada
+        );
+
+        if ($imagemProduto) {
+            $imagensVinculadas++;
+        }
+
+        if ($imagemSalvaLocalmente) {
+            $imagensSalvasLocalmente++;
+        }
+
+        if ($imagemIgnorada) {
+            $imagensIgnoradas++;
+        }
+
         $idCategoria = obterIdPorNome($pdo, "categoria", "id_categoria", "nome_categoria", $categoria);
         $idFabricante = obterIdPorNome($pdo, "fabricante", "id_fabricante", "nome_fabricante", $marca);
 
         $stmtProduto->execute([$nome]);
-        $produtoId = $stmtProduto->fetchColumn();
+        $produtoAtual = $stmtProduto->fetch(PDO::FETCH_ASSOC);
 
-        if ($produtoId) {
-            $produtoId = (int) $produtoId;
-            $stmtAtualizarProduto->execute([$idCategoria, $idFabricante, $produtoId]);
+        if ($produtoAtual) {
+            $produtoId = (int) $produtoAtual["id_produto"];
+            $imagemFinal = $imagemProduto ?: $produtoAtual["imagem_produto"];
+            $stmtAtualizarProduto->execute([$idCategoria, $idFabricante, $imagemFinal, $produtoId]);
             $atualizados++;
         } else {
             $stmtInserirProduto->execute([
                 $nome,
                 "Produto importado por planilha.",
-                "assets/img/logo/logo.png",
+                $imagemProduto ?: IMPORTACAO_IMAGEM_PADRAO_PRODUTO,
                 null,
                 $idCategoria,
                 $idFabricante
@@ -710,10 +1343,12 @@ try {
     }
 
     $pdo->commit();
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+
+    removerImagensSalvasImportacao($arquivosImagensSalvas);
 
     jsonResponse(false, "Erro ao importar: " . $e->getMessage(), null, 500);
 }
@@ -721,5 +1356,10 @@ try {
 jsonResponse(true, "Importacao concluida.", [
     "produtos_inseridos" => $inseridos,
     "produtos_atualizados" => $atualizados,
-    "linhas_com_erro" => $erros
+    "linhas_com_erro" => $erros,
+    "imagens_vinculadas" => $imagensVinculadas,
+    "imagens_salvas" => $imagensSalvasLocalmente,
+    "imagens_ignoradas" => $imagensIgnoradas,
+    "coluna_imagem_detectada" => $indiceColunaImagem !== null,
+    "imagens_detectadas_automaticamente" => $imagensDetectadasAutomaticamente
 ]);

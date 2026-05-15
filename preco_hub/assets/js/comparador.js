@@ -52,6 +52,110 @@ function normalizarTexto(texto) {
         .trim();
 }
 
+const LOGOS_MERCADOS = {
+    "delta": "assets/img/logo%20mercados/Logo%20Delta.png",
+    "favetta": "assets/img/logo%20mercados/Logo%20Favetta.png",
+    "pague menos": "assets/img/logo%20mercados/Logo%20Pague%20Menos.png",
+    "savegnago": "assets/img/logo%20mercados/Logo%20Savegnago.png"
+};
+
+const imagensLogosMercados = {};
+
+function obterLogoMercado(nomeMercado) {
+    return LOGOS_MERCADOS[normalizarTexto(nomeMercado)] || "";
+}
+
+function carregarImagemLogoMercado(nomeMercado, chart) {
+    const caminhoLogo = obterLogoMercado(nomeMercado);
+
+    if (!caminhoLogo) {
+        return null;
+    }
+
+    if (!imagensLogosMercados[caminhoLogo]) {
+        const imagem = new Image();
+        imagem.onload = function () {
+            if (chart) {
+                chart.draw();
+            }
+        };
+        imagem.src = caminhoLogo;
+        imagensLogosMercados[caminhoLogo] = imagem;
+    }
+
+    return imagensLogosMercados[caminhoLogo];
+}
+
+const pluginLogosMercadosGrafico = {
+    id: "logosMercadosGrafico",
+    afterDraw(chart) {
+        const escalaX = chart.scales.x;
+
+        if (!escalaX || !chart.data || !Array.isArray(chart.data.labels)) {
+            return;
+        }
+
+        const ctx = chart.ctx;
+        const yCentro = escalaX.top + 20;
+        const larguraMaxima = 26;
+        const alturaMaxima = 18;
+        const espacamento = 6;
+
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = "700 12px Inter, Arial, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+
+        chart.data.labels.forEach(function (label, index) {
+            const imagem = carregarImagemLogoMercado(label, chart);
+            const texto = abreviarTexto(label, 18);
+            const larguraTexto = ctx.measureText(texto).width;
+            const xCentro = typeof escalaX.getPixelForTick === "function"
+                ? escalaX.getPixelForTick(index)
+                : escalaX.getPixelForValue(index);
+
+            if (!imagem || !imagem.complete || !imagem.naturalWidth) {
+                ctx.fillText(texto, xCentro - (larguraTexto / 2), yCentro);
+                return;
+            }
+
+            const proporcao = Math.min(larguraMaxima / imagem.naturalWidth, alturaMaxima / imagem.naturalHeight);
+            const largura = imagem.naturalWidth * proporcao;
+            const altura = imagem.naturalHeight * proporcao;
+            const larguraGrupo = largura + espacamento + larguraTexto;
+            const xLogo = xCentro - (larguraGrupo / 2);
+            const yLogo = yCentro - (altura / 2);
+
+            ctx.drawImage(imagem, xLogo, yLogo, largura, altura);
+            ctx.fillText(texto, xLogo + largura + espacamento, yCentro);
+        });
+
+        ctx.restore();
+    }
+};
+
+function obterMarcaProduto(produto) {
+    return produto ? String(produto.nome_fabricante || produto.marca || "").trim() : "";
+}
+
+function obterNomeProdutoComMarca(produto) {
+    const nome = produto ? produto.nome_produto || "Produto sem nome" : "Produto sem nome";
+    const marca = obterMarcaProduto(produto);
+
+    return marca ? nome + " - " + marca : nome;
+}
+
+function renderizarProdutoComMarca(produto) {
+    const nome = produto ? produto.nome_produto || "Produto sem nome" : "Produto sem nome";
+    const marca = obterMarcaProduto(produto);
+
+    return `
+        <span class="comparador-produto-nome">${escaparHtml(nome)}</span>
+        ${marca ? `<small class="comparador-produto-marca">${escaparHtml(marca)}</small>` : ""}
+    `;
+}
+
 async function lerListaComparacao() {
     try {
         const response = await fetch(API_LISTA_LISTAR, {
@@ -180,7 +284,8 @@ function obterProdutosFiltradosComparacao() {
     }
 
     return produtosGlobal.filter(function (produto) {
-        return normalizarTexto(produto.nome_produto).includes(termo);
+        return normalizarTexto(produto.nome_produto).includes(termo)
+            || normalizarTexto(obterMarcaProduto(produto)).includes(termo);
     });
 }
 
@@ -230,7 +335,7 @@ function renderizarSugestoesProdutos(produtos, abrir) {
             botao.dataset.produtoId = String(produto.id_produto);
             botao.setAttribute("role", "option");
             botao.setAttribute("aria-selected", selecionado ? "true" : "false");
-            botao.textContent = produto.nome_produto || "Produto sem nome";
+            botao.innerHTML = renderizarProdutoComMarca(produto);
             sugestoes.appendChild(botao);
         });
     }
@@ -258,7 +363,7 @@ function selecionarProdutoComparacao(idProduto, atualizarCampo) {
     }
 
     if (campoBusca && atualizarCampo !== false) {
-        campoBusca.value = produto.nome_produto || "Produto sem nome";
+        campoBusca.value = obterNomeProdutoComMarca(produto);
     }
 
     gerarGraficos();
@@ -288,7 +393,7 @@ function preencherSeletorProdutos() {
     produtosGlobal.forEach(function (produto) {
         const opcao = document.createElement("option");
         opcao.value = String(produto.id_produto);
-        opcao.textContent = produto.nome_produto || "Produto sem nome";
+        opcao.textContent = obterNomeProdutoComMarca(produto);
         seletor.appendChild(opcao);
     });
 
@@ -301,7 +406,7 @@ function preencherSeletorProdutos() {
 
     if (campoBusca) {
         const produto = obterProdutoSelecionado();
-        campoBusca.value = produto ? produto.nome_produto || "Produto sem nome" : "";
+        campoBusca.value = produto ? obterNomeProdutoComMarca(produto) : "";
     }
 
     renderizarSugestoesProdutos([], false);
@@ -496,7 +601,7 @@ function quebrarRotuloProduto(nome) {
 
 function obterNomeProdutoPorIndice(indice) {
     const produto = produtosGlobal[indice];
-    return produto ? produto.nome_produto : "";
+    return produto ? obterNomeProdutoComMarca(produto) : "";
 }
 
 function ajustarAreaGraficoPrecos(totalPontos) {
@@ -570,12 +675,14 @@ function obterOpcoesBase(eixoValor) {
             legend: {
                 position: "bottom",
                 labels: {
-                    usePointStyle: true,
-                    boxWidth: 10,
-                    padding: 18,
+                    usePointStyle: false,
+                    boxWidth: 0,
+                    boxHeight: 0,
+                    padding: 20,
+                    color: "#0F172A",
                     font: {
-                        size: 13,
-                        weight: "600"
+                        size: 14,
+                        weight: "800"
                     }
                 }
             },
@@ -648,8 +755,10 @@ function criarOpcoesGraficoPrecos(produto, precosOrdenados) {
     opcoes.plugins.legend.position = "bottom";
     opcoes.plugins.legend.labels.generateLabels = function (chart) {
         return Chart.defaults.plugins.legend.labels.generateLabels(chart).map(function (label) {
-            label.fillStyle = "#111827";
-            label.strokeStyle = "#111827";
+            label.fillStyle = "rgba(0, 0, 0, 0)";
+            label.strokeStyle = "rgba(0, 0, 0, 0)";
+            label.lineWidth = 0;
+            label.pointStyle = false;
             return label;
         });
     };
@@ -659,7 +768,7 @@ function criarOpcoesGraficoPrecos(produto, precosOrdenados) {
                 return "";
             }
 
-            return produto.nome_produto || "Produto";
+            return obterNomeProdutoComMarca(produto);
         },
         label: function (context) {
             return context.label + ": " + formatarPreco(context.parsed.y);
@@ -668,8 +777,10 @@ function criarOpcoesGraficoPrecos(produto, precosOrdenados) {
     opcoes.scales.x.ticks.callback = function (value) {
         return abreviarTexto(this.getLabelForValue(value), 18);
     };
+    opcoes.scales.x.ticks.color = "rgba(0, 0, 0, 0)";
     opcoes.scales.x.ticks.maxRotation = 0;
     opcoes.scales.x.ticks.minRotation = 0;
+    opcoes.scales.x.ticks.padding = 24;
     opcoes.scales.y.beginAtZero = false;
 
     if (valores.length > 0) {
@@ -749,7 +860,7 @@ function gerarTabela() {
         if (!melhorPreco) {
             const linhaSemPreco = document.createElement("tr");
             linhaSemPreco.innerHTML = `
-                <td class="fw-600">${escaparHtml(produto.nome_produto)}</td>
+                <td class="fw-600">${renderizarProdutoComMarca(produto)}</td>
                 <td colspan="${mercados.length + 2}" class="text-center text-muted">Sem precos cadastrados.</td>
             `;
             corpo.appendChild(linhaSemPreco);
@@ -770,7 +881,7 @@ function gerarTabela() {
 
         const linha = document.createElement("tr");
         linha.innerHTML = `
-            <td class="fw-600">${escaparHtml(produto.nome_produto)}</td>
+            <td class="fw-600">${renderizarProdutoComMarca(produto)}</td>
             ${colunasMercados}
             <td>
                 <span class="badge bg-success">${formatarPreco(melhorPreco.preco)}</span>
@@ -807,7 +918,7 @@ function gerarGraficos() {
         }),
         datasets: [
             {
-                label: abreviarTexto(produto.nome_produto || "Produto", 42),
+                label: abreviarTexto(obterNomeProdutoComMarca(produto), 42),
                 data: precosOrdenados.map(function (preco) {
                     return preco.preco;
                 }),
@@ -834,7 +945,8 @@ function gerarGraficos() {
     graficoPrecos = new Chart(ctxPrecos, {
         type: "line",
         data: dadosPrecos,
-        options: criarOpcoesGraficoPrecos(produto, precosOrdenados)
+        options: criarOpcoesGraficoPrecos(produto, precosOrdenados),
+        plugins: [pluginLogosMercadosGrafico]
     });
 }
 
