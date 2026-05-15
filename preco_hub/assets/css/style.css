@@ -1055,6 +1055,54 @@ body.filtro-produtos-ativo .produtos-secundarios {
     font-size: 0.88rem;
 }
 
+.checklist-pdf-captura {
+    position: fixed;
+    top: 0;
+    left: -12000px;
+    z-index: -1;
+    width: 1040px;
+    pointer-events: none;
+}
+
+.checklist-pdf-documento {
+    width: 1040px;
+    min-height: 1468px;
+    padding: 34px;
+    background-color: #F8FAFC;
+    background-image: url("../img/Fundo%20para%20o%20gerador%20de%20PDF.png");
+    background-size: 100% auto;
+    background-position: center top;
+    background-repeat: repeat-y;
+}
+
+.checklist-pdf-export {
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.94);
+    box-shadow: none !important;
+}
+
+.checklist-pdf-export .card-body {
+    padding: 22px 24px;
+}
+
+.checklist-pdf-export .pdf-oculto {
+    display: none !important;
+}
+
+.checklist-pdf-export .pdf-quantidade-estatica {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 26px;
+    border: 1px solid rgba(100, 116, 139, 0.34);
+    border-radius: 6px;
+    color: #64748B;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background-color: rgba(255, 255, 255, 0.72);
+}
+
 .lista-item-acoes .btn-group .btn {
     min-width: 38px;
 }

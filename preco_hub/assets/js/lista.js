@@ -5,9 +5,11 @@ const API_LISTA_REMOVER = "backend/listas/remover.php";
 const API_LISTA_MARCAR = "backend/listas/marcar.php";
 const API_LISTA_LIMPAR = "backend/listas/limpar.php";
 const API_LISTA_QUANTIDADE = "backend/listas/quantidade.php";
+const PDF_FUNDO_CHECKLIST = "assets/img/Fundo%20para%20o%20gerador%20de%20PDF.png";
 
 let produtosBackendPromise = null;
 let estrategiaRenderId = 0;
+let listaAtualPdf = [];
 
 const ORDEM_MERCADOS = [
     "Savegnago",
@@ -607,6 +609,182 @@ function ativarEventos() {
     });
 }
 
+function bibliotecasPdfDisponiveis() {
+    return typeof html2canvas === "function"
+        && window.jspdf
+        && typeof window.jspdf.jsPDF === "function";
+}
+
+function carregarImagemPdf(src) {
+    return new Promise(function (resolve) {
+        const imagem = new Image();
+
+        imagem.onload = function () {
+            resolve(true);
+        };
+
+        imagem.onerror = function () {
+            resolve(false);
+        };
+
+        imagem.src = src;
+    });
+}
+
+function prepararCloneChecklistPdf() {
+    const cardChecklist = document.getElementById("cardChecklistCompras");
+
+    if (!cardChecklist) {
+        return null;
+    }
+
+    const areaCaptura = document.createElement("div");
+    const documento = document.createElement("div");
+    const clone = cardChecklist.cloneNode(true);
+
+    areaCaptura.className = "checklist-pdf-captura";
+    documento.className = "checklist-pdf-documento";
+    documento.style.backgroundImage = 'url("' + PDF_FUNDO_CHECKLIST + '")';
+    clone.id = "cardChecklistComprasPdf";
+    clone.classList.add("checklist-pdf-export");
+
+    const botaoPdf = clone.querySelector("#baixarPdfLista");
+    if (botaoPdf) {
+        botaoPdf.remove();
+    }
+
+    clone.querySelectorAll(".remover-item, .quantidade-item").forEach(function (elemento) {
+        elemento.remove();
+    });
+
+    clone.querySelectorAll(".lista-item-acoes .btn-group").forEach(function (grupoQuantidade) {
+        const quantidade = grupoQuantidade.querySelector(".disabled");
+        const textoQuantidade = quantidade ? quantidade.textContent.trim() : "";
+        const badgeQuantidade = document.createElement("span");
+
+        badgeQuantidade.className = "pdf-quantidade-estatica";
+        badgeQuantidade.textContent = textoQuantidade || "x1";
+        grupoQuantidade.replaceWith(badgeQuantidade);
+    });
+
+    documento.appendChild(clone);
+    areaCaptura.appendChild(documento);
+    document.body.appendChild(areaCaptura);
+
+    return areaCaptura;
+}
+
+function nomeArquivoChecklistPdf() {
+    const data = new Date();
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+
+    return "checklist-preco-hub-" + ano + "-" + mes + "-" + dia + ".pdf";
+}
+
+function adicionarCanvasAoPdf(pdf, canvas) {
+    const larguraPagina = pdf.internal.pageSize.getWidth();
+    const alturaPagina = pdf.internal.pageSize.getHeight();
+    const margem = 8;
+    const larguraImagem = larguraPagina - (margem * 2);
+    const alturaUtilPagina = alturaPagina - (margem * 2);
+    const alturaCanvasPorPagina = Math.floor(alturaUtilPagina * canvas.width / larguraImagem);
+    let origemY = 0;
+    let primeiraPagina = true;
+
+    while (origemY < canvas.height) {
+        const alturaFatia = Math.min(alturaCanvasPorPagina, canvas.height - origemY);
+        const canvasPagina = document.createElement("canvas");
+        const contextoPagina = canvasPagina.getContext("2d");
+        const alturaImagem = alturaFatia * larguraImagem / canvas.width;
+
+        canvasPagina.width = canvas.width;
+        canvasPagina.height = alturaFatia;
+        contextoPagina.drawImage(
+            canvas,
+            0,
+            origemY,
+            canvas.width,
+            alturaFatia,
+            0,
+            0,
+            canvas.width,
+            alturaFatia
+        );
+
+        if (!primeiraPagina) {
+            pdf.addPage();
+        }
+
+        pdf.addImage(canvasPagina.toDataURL("image/png"), "PNG", margem, margem, larguraImagem, alturaImagem);
+
+        primeiraPagina = false;
+        origemY += alturaFatia;
+    }
+}
+
+async function baixarPdfChecklist() {
+    const botaoPdf = document.getElementById("baixarPdfLista");
+
+    if (!bibliotecasPdfDisponiveis()) {
+        alert("Nao foi possivel carregar as bibliotecas para gerar o PDF.");
+        return;
+    }
+
+    if (!listaAtualPdf.length) {
+        alert("Adicione itens na lista antes de gerar o PDF.");
+        return;
+    }
+
+    if (botaoPdf) {
+        botaoPdf.disabled = true;
+        botaoPdf.textContent = "Gerando PDF...";
+    }
+
+    let areaCaptura = null;
+
+    try {
+        const fundoCarregado = await carregarImagemPdf(PDF_FUNDO_CHECKLIST);
+
+        if (!fundoCarregado) {
+            throw new Error("Fundo do PDF nao encontrado.");
+        }
+
+        areaCaptura = prepararCloneChecklistPdf();
+
+        if (!areaCaptura) {
+            throw new Error("Checklist nao encontrado.");
+        }
+
+        const documento = areaCaptura.querySelector(".checklist-pdf-documento");
+        const canvas = await html2canvas(documento, {
+            backgroundColor: null,
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            windowWidth: documento.scrollWidth,
+            windowHeight: documento.scrollHeight
+        });
+        const pdf = new window.jspdf.jsPDF("p", "mm", "a4");
+
+        adicionarCanvasAoPdf(pdf, canvas);
+        pdf.save(nomeArquivoChecklistPdf());
+    } catch (erro) {
+        console.error(erro);
+        alert("Nao foi possivel gerar o PDF da lista.");
+    } finally {
+        if (areaCaptura) {
+            areaCaptura.remove();
+        }
+
+        if (botaoPdf) {
+            botaoPdf.disabled = listaAtualPdf.length === 0;
+            botaoPdf.textContent = "Baixar PDF";
+        }
+    }
+}
+
 async function renderizarLista() {
     const listaContainer = document.getElementById("listaCompras");
     const totalItens = document.getElementById("totalItens");
@@ -614,6 +792,7 @@ async function renderizarLista() {
     const totalPreco = document.getElementById("totalPreco");
     const listaVazia = document.getElementById("listaVazia");
     const btnLimparLista = document.getElementById("limparLista");
+    const btnBaixarPdf = document.getElementById("baixarPdfLista");
 
     if (!listaContainer || !totalItens || !totalPendentes || !totalPreco || !listaVazia) {
         return;
@@ -628,14 +807,19 @@ async function renderizarLista() {
     } catch (erro) {
         console.error(erro);
         estrategiaRenderId++;
+        listaAtualPdf = [];
         totalItens.textContent = "0";
         totalPendentes.textContent = "0";
         totalPreco.textContent = "R$ 0,00";
+        if (btnBaixarPdf) {
+            btnBaixarPdf.disabled = true;
+        }
         mostrarErroLista(erro.message);
         return;
     }
 
     const listaOrdenada = ordenarPorMercado(listaOriginal);
+    listaAtualPdf = listaOriginal;
     const totalQuantidade = listaOriginal.reduce(function (soma, item) {
         return soma + item.quantidade;
     }, 0);
@@ -644,10 +828,14 @@ async function renderizarLista() {
 
     if (listaOriginal.length === 0) {
         estrategiaRenderId++;
+        listaAtualPdf = [];
         listaContainer.innerHTML = "";
         listaVazia.classList.remove("d-none");
         totalPendentes.textContent = "0";
         totalPreco.textContent = "R$ 0,00";
+        if (btnBaixarPdf) {
+            btnBaixarPdf.disabled = true;
+        }
 
         const estrategiaContainer = document.getElementById("estrategiaCompra");
         if (estrategiaContainer) {
@@ -665,6 +853,10 @@ async function renderizarLista() {
 
     if (btnLimparLista) {
         btnLimparLista.disabled = false;
+    }
+
+    if (btnBaixarPdf) {
+        btnBaixarPdf.disabled = false;
     }
 
     let total = 0;
@@ -746,6 +938,7 @@ async function renderizarLista() {
 
 document.addEventListener("DOMContentLoaded", function () {
     const btnLimparLista = document.getElementById("limparLista");
+    const btnBaixarPdf = document.getElementById("baixarPdfLista");
 
     if (btnLimparLista) {
         btnLimparLista.addEventListener("click", async function () {
@@ -759,6 +952,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 await limparLista();
             }
         });
+    }
+
+    if (btnBaixarPdf) {
+        btnBaixarPdf.disabled = true;
+        btnBaixarPdf.addEventListener("click", baixarPdfChecklist);
     }
 
     renderizarLista();
