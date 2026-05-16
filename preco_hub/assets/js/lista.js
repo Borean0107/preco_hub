@@ -5,7 +5,6 @@ const API_LISTA_REMOVER = "backend/listas/remover.php";
 const API_LISTA_MARCAR = "backend/listas/marcar.php";
 const API_LISTA_LIMPAR = "backend/listas/limpar.php";
 const API_LISTA_QUANTIDADE = "backend/listas/quantidade.php";
-const PDF_FUNDO_CHECKLIST = "assets/img/Fundo%20para%20o%20gerador%20de%20PDF.png";
 
 let produtosBackendPromise = null;
 let estrategiaRenderId = 0;
@@ -333,27 +332,326 @@ async function limparLista() {
     renderizarLista();
 }
 
-async function removerItem(id) {
-    await executarAcaoLista(API_LISTA_REMOVER, {
-        id_lista_produto: id
-    });
-    renderizarLista();
+async function removerItem(id, elementoOrigem) {
+    const itemAnimado = iniciarAnimacaoItemLista(elementoOrigem, "lista-item-removendo", "lista-controle-pulso");
+    const animacaoMinima = aguardarAnimacaoLista(240);
+
+    try {
+        await executarAcaoLista(API_LISTA_REMOVER, {
+            id_lista_produto: id
+        });
+        await animacaoMinima;
+        renderizarLista({
+            mostrarCarregando: false,
+            preservarRolagem: true
+        });
+    } catch (erro) {
+        limparAnimacaoItemLista(itemAnimado, elementoOrigem, "lista-controle-pulso");
+        throw erro;
+    }
 }
 
-async function alterarQuantidade(id, acao) {
-    await executarAcaoLista(API_LISTA_QUANTIDADE, {
-        id_lista_produto: id,
-        acao: acao
-    });
-    renderizarLista();
+async function alterarQuantidade(id, acao, elementoOrigem) {
+    const itemAnimado = iniciarAnimacaoItemLista(elementoOrigem, "lista-item-quantidade", "lista-controle-pulso");
+    const animacaoMinima = aguardarAnimacaoLista(260);
+
+    try {
+        const resposta = await executarAcaoLista(API_LISTA_QUANTIDADE, {
+            id_lista_produto: id,
+            acao: acao
+        });
+        await animacaoMinima;
+
+        const novaQuantidade = resposta.data && Number.isFinite(Number(resposta.data.quantidade))
+            ? Number(resposta.data.quantidade)
+            : obterNovaQuantidadeLocal(id, acao);
+
+        if (novaQuantidade <= 0) {
+            renderizarLista({
+                mostrarCarregando: false,
+                preservarRolagem: true
+            });
+            return;
+        }
+
+        atualizarQuantidadeLocal(id, novaQuantidade);
+        atualizarItemQuantidadeNaTela(id);
+        atualizarResumoListaNaTela();
+        atualizarEstrategiaListaNaTela();
+        limparAnimacaoItemLista(itemAnimado, elementoOrigem, "lista-controle-pulso");
+    } catch (erro) {
+        limparAnimacaoItemLista(itemAnimado, elementoOrigem, "lista-controle-pulso");
+        throw erro;
+    }
 }
 
-async function marcarComprado(id, checked) {
-    await executarAcaoLista(API_LISTA_MARCAR, {
-        id_lista_produto: id,
-        comprado: checked ? 1 : 0
+async function marcarComprado(id, checked, elementoOrigem) {
+    const itemAnimado = iniciarAnimacaoItemLista(
+        elementoOrigem,
+        checked ? "lista-item-marcando" : "lista-item-desmarcando",
+        "lista-controle-pulso"
+    );
+    const animacaoMinima = aguardarAnimacaoLista(260);
+
+    try {
+        await executarAcaoLista(API_LISTA_MARCAR, {
+            id_lista_produto: id,
+            comprado: checked ? 1 : 0
+        });
+        await animacaoMinima;
+        atualizarCompradoLocal(id, checked);
+        atualizarItemCompradoNaTela(id, checked);
+        atualizarResumoListaNaTela();
+        atualizarEstrategiaListaNaTela();
+        limparAnimacaoItemLista(itemAnimado, elementoOrigem, "lista-controle-pulso");
+    } catch (erro) {
+        if (elementoOrigem) {
+            elementoOrigem.checked = !checked;
+        }
+
+        limparAnimacaoItemLista(itemAnimado, elementoOrigem, "lista-controle-pulso");
+        throw erro;
+    }
+}
+
+function aguardarAnimacaoLista(tempo) {
+    return new Promise(function (resolve) {
+        window.setTimeout(resolve, tempo);
     });
-    renderizarLista();
+}
+
+function obterItemLista(elementoOrigem) {
+    if (!elementoOrigem || typeof elementoOrigem.closest !== "function") {
+        return null;
+    }
+
+    return elementoOrigem.closest(".item-lista");
+}
+
+function iniciarAnimacaoItemLista(elementoOrigem, classeItem, classeControle) {
+    const item = obterItemLista(elementoOrigem);
+    const classesItem = [
+        "lista-item-marcando",
+        "lista-item-desmarcando",
+        "lista-item-quantidade",
+        "lista-item-removendo",
+        "lista-item-processando"
+    ];
+
+    if (item) {
+        classesItem.forEach(function (classe) {
+            item.classList.remove(classe);
+        });
+        void item.offsetWidth;
+        item.classList.add(classeItem, "lista-item-processando");
+    }
+
+    if (elementoOrigem && classeControle) {
+        elementoOrigem.classList.remove(classeControle);
+        void elementoOrigem.offsetWidth;
+        elementoOrigem.classList.add(classeControle);
+    }
+
+    return item;
+}
+
+function limparAnimacaoItemLista(item, elementoOrigem, classeControle) {
+    if (item) {
+        item.classList.remove(
+            "lista-item-marcando",
+            "lista-item-desmarcando",
+            "lista-item-quantidade",
+            "lista-item-removendo",
+            "lista-item-processando"
+        );
+    }
+
+    if (elementoOrigem && classeControle) {
+        elementoOrigem.classList.remove(classeControle);
+    }
+}
+
+function obterItemAtualLista(id) {
+    return listaAtualPdf.find(function (item) {
+        return String(item.id) === String(id);
+    }) || null;
+}
+
+function obterNovaQuantidadeLocal(id, acao) {
+    const item = obterItemAtualLista(id);
+
+    if (!item) {
+        return 1;
+    }
+
+    return acao === "aumentar"
+        ? item.quantidade + 1
+        : Math.max(item.quantidade - 1, 0);
+}
+
+function atualizarQuantidadeLocal(id, quantidade) {
+    const item = obterItemAtualLista(id);
+
+    if (item) {
+        item.quantidade = Math.max(Number(quantidade) || 1, 1);
+    }
+}
+
+function atualizarCompradoLocal(id, comprado) {
+    const item = obterItemAtualLista(id);
+
+    if (item) {
+        item.comprado = Boolean(comprado);
+    }
+}
+
+function obterElementoItemListaPorId(id) {
+    const itens = document.querySelectorAll(".item-lista[data-id]");
+
+    return Array.from(itens).find(function (item) {
+        return item.dataset.id === String(id);
+    }) || null;
+}
+
+function atualizarItemQuantidadeNaTela(id) {
+    const item = obterItemAtualLista(id);
+    const elemento = obterElementoItemListaPorId(id);
+
+    if (!item || !elemento) {
+        return;
+    }
+
+    const precoTotal = elemento.querySelector(".lista-item-total");
+    const quantidade = elemento.querySelector(".lista-item-quantidade");
+
+    if (precoTotal) {
+        precoTotal.textContent = formatarPreco(item.preco * item.quantidade);
+    }
+
+    if (quantidade) {
+        quantidade.textContent = "x" + item.quantidade;
+    }
+
+    const botaoDiminuir = elemento.querySelector('.quantidade-item[data-acao="diminuir"]');
+    if (botaoDiminuir) {
+        botaoDiminuir.disabled = item.quantidade <= 1;
+    }
+}
+
+function atualizarItemCompradoNaTela(id, comprado) {
+    const elemento = obterElementoItemListaPorId(id);
+
+    if (!elemento) {
+        return;
+    }
+
+    const checkbox = elemento.querySelector(".checkbox-item");
+    const label = elemento.querySelector(".form-check-label");
+
+    if (checkbox) {
+        checkbox.checked = Boolean(comprado);
+    }
+
+    if (label) {
+        label.classList.toggle("text-decoration-line-through", Boolean(comprado));
+        label.classList.toggle("text-muted", Boolean(comprado));
+    }
+}
+
+function atualizarResumoListaNaTela() {
+    const totalItens = document.getElementById("totalItens");
+    const totalPendentes = document.getElementById("totalPendentes");
+    const totalPreco = document.getElementById("totalPreco");
+    const btnBaixarPdf = document.getElementById("baixarPdfLista");
+    const totalQuantidade = listaAtualPdf.reduce(function (soma, item) {
+        return soma + item.quantidade;
+    }, 0);
+    const pendentes = listaAtualPdf.reduce(function (soma, item) {
+        return item.comprado ? soma : soma + item.quantidade;
+    }, 0);
+    const total = listaAtualPdf.reduce(function (soma, item) {
+        return item.comprado ? soma : soma + (Number(item.preco) * item.quantidade);
+    }, 0);
+
+    if (totalItens) {
+        totalItens.textContent = String(totalQuantidade);
+    }
+
+    if (totalPendentes) {
+        totalPendentes.textContent = String(pendentes);
+    }
+
+    if (totalPreco) {
+        totalPreco.textContent = formatarPreco(total);
+    }
+
+    document.querySelectorAll(".badge-subtotal[data-mercado]").forEach(function (badge) {
+        badge.textContent = "Subtotal: " + formatarPreco(calcularSubtotalMercado(listaAtualPdf, badge.dataset.mercado));
+    });
+
+    if (btnBaixarPdf) {
+        btnBaixarPdf.disabled = listaAtualPdf.length === 0;
+    }
+}
+
+function calcularAlturaMinimaEstrategia(lista) {
+    const mercadosPendentes = new Set(
+        lista
+            .filter(function (item) {
+                return !item.comprado;
+            })
+            .map(function (item) {
+                return item.mercado;
+            })
+            .filter(Boolean)
+    );
+
+    if (mercadosPendentes.size === 0) {
+        return 120;
+    }
+
+    return 96 + (mercadosPendentes.size * 42);
+}
+
+function estabilizarAlturaEstrategia(lista) {
+    const estrategiaContainer = document.getElementById("estrategiaCompra");
+
+    if (!estrategiaContainer) {
+        return;
+    }
+
+    const alturaAtual = estrategiaContainer.offsetHeight;
+    const alturaMinima = calcularAlturaMinimaEstrategia(lista);
+    estrategiaContainer.style.minHeight = Math.ceil(Math.max(alturaAtual, alturaMinima)) + "px";
+}
+
+function atualizarEstrategiaListaNaTela() {
+    estabilizarAlturaEstrategia(listaAtualPdf);
+
+    estrategiaRenderId++;
+    const renderId = estrategiaRenderId;
+    const atualizacao = calcularEstrategia(listaAtualPdf, renderId, {
+        mostrarCarregando: false
+    });
+
+    Promise.resolve(atualizacao).then(function () {
+        if (renderId === estrategiaRenderId) {
+            estabilizarAlturaEstrategia(listaAtualPdf);
+        }
+    }).catch(function (erro) {
+        console.error(erro);
+    });
+}
+
+function restaurarRolagem(posicao) {
+    if (!posicao) {
+        return;
+    }
+
+    window.scrollTo(posicao.x, posicao.y);
+    requestAnimationFrame(function () {
+        window.scrollTo(posicao.x, posicao.y);
+    });
 }
 
 function obterOrdemMercado(nomeMercado) {
@@ -384,7 +682,8 @@ function calcularSubtotalMercado(lista, mercado) {
         }, 0);
 }
 
-async function calcularEstrategia(lista, renderId) {
+async function calcularEstrategia(lista, renderId, opcoes) {
+    const configuracao = opcoes || {};
     const estrategiaContainer = document.getElementById("estrategiaCompra");
     if (!estrategiaContainer) return;
 
@@ -399,9 +698,11 @@ async function calcularEstrategia(lista, renderId) {
         return;
     }
 
-    estrategiaContainer.innerHTML = `
-        <p class="mb-0 text-muted">Calculando a melhor estrategia...</p>
-    `;
+    if (configuracao.mostrarCarregando !== false) {
+        estrategiaContainer.innerHTML = `
+            <p class="mb-0 text-muted">Calculando a melhor estrategia...</p>
+        `;
+    }
 
     let analises;
 
@@ -591,20 +892,32 @@ function ativarEventos() {
             });
 
             if (confirmado) {
-                await removerItem(botao.dataset.id);
+                try {
+                    await removerItem(botao.dataset.id, botao);
+                } catch (erro) {
+                    console.error(erro);
+                }
             }
         });
     });
 
     document.querySelectorAll(".quantidade-item").forEach(function (botao) {
-        botao.addEventListener("click", function () {
-            alterarQuantidade(botao.dataset.id, botao.dataset.acao);
+        botao.addEventListener("click", async function () {
+            try {
+                await alterarQuantidade(botao.dataset.id, botao.dataset.acao, botao);
+            } catch (erro) {
+                console.error(erro);
+            }
         });
     });
 
     document.querySelectorAll(".checkbox-item").forEach(function (checkbox) {
-        checkbox.addEventListener("change", function () {
-            marcarComprado(checkbox.dataset.id, checkbox.checked);
+        checkbox.addEventListener("change", async function () {
+            try {
+                await marcarComprado(checkbox.dataset.id, checkbox.checked, checkbox);
+            } catch (erro) {
+                console.error(erro);
+            }
         });
     });
 }
@@ -613,22 +926,6 @@ function bibliotecasPdfDisponiveis() {
     return typeof html2canvas === "function"
         && window.jspdf
         && typeof window.jspdf.jsPDF === "function";
-}
-
-function carregarImagemPdf(src) {
-    return new Promise(function (resolve) {
-        const imagem = new Image();
-
-        imagem.onload = function () {
-            resolve(true);
-        };
-
-        imagem.onerror = function () {
-            resolve(false);
-        };
-
-        imagem.src = src;
-    });
 }
 
 function prepararCloneChecklistPdf() {
@@ -644,7 +941,6 @@ function prepararCloneChecklistPdf() {
 
     areaCaptura.className = "checklist-pdf-captura";
     documento.className = "checklist-pdf-documento";
-    documento.style.backgroundImage = 'url("' + PDF_FUNDO_CHECKLIST + '")';
     clone.id = "cardChecklistComprasPdf";
     clone.classList.add("checklist-pdf-export");
 
@@ -745,12 +1041,6 @@ async function baixarPdfChecklist() {
     let areaCaptura = null;
 
     try {
-        const fundoCarregado = await carregarImagemPdf(PDF_FUNDO_CHECKLIST);
-
-        if (!fundoCarregado) {
-            throw new Error("Fundo do PDF nao encontrado.");
-        }
-
         areaCaptura = prepararCloneChecklistPdf();
 
         if (!areaCaptura) {
@@ -785,7 +1075,14 @@ async function baixarPdfChecklist() {
     }
 }
 
-async function renderizarLista() {
+async function renderizarLista(opcoes) {
+    const configuracao = opcoes || {};
+    const posicaoRolagem = configuracao.preservarRolagem
+        ? {
+            x: window.scrollX || window.pageXOffset,
+            y: window.scrollY || window.pageYOffset
+        }
+        : null;
     const listaContainer = document.getElementById("listaCompras");
     const totalItens = document.getElementById("totalItens");
     const totalPendentes = document.getElementById("totalPendentes");
@@ -798,7 +1095,9 @@ async function renderizarLista() {
         return;
     }
 
-    listaContainer.innerHTML = '<p class="mb-0 text-muted">Carregando sua lista...</p>';
+    if (configuracao.mostrarCarregando !== false) {
+        listaContainer.innerHTML = '<p class="mb-0 text-muted">Carregando sua lista...</p>';
+    }
 
     let listaOriginal = [];
 
@@ -815,6 +1114,7 @@ async function renderizarLista() {
             btnBaixarPdf.disabled = true;
         }
         mostrarErroLista(erro.message);
+        restaurarRolagem(posicaoRolagem);
         return;
     }
 
@@ -839,6 +1139,7 @@ async function renderizarLista() {
 
         const estrategiaContainer = document.getElementById("estrategiaCompra");
         if (estrategiaContainer) {
+            estrategiaContainer.style.minHeight = "";
             estrategiaContainer.innerHTML = "Ainda nao ha dados suficientes para calcular a estrategia.";
         }
 
@@ -846,6 +1147,7 @@ async function renderizarLista() {
             btnLimparLista.disabled = true;
         }
 
+        restaurarRolagem(posicaoRolagem);
         return;
     }
 
@@ -874,7 +1176,7 @@ async function renderizarLista() {
                 <div class="mercado-bloco mt-4 mb-2">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="text-marrom fw-bold mb-0">${renderizarTituloMercadoComLogo(item.mercado)}</h5>
-                        <span class="badge-subtotal">
+                        <span class="badge-subtotal" data-mercado="${escaparHtml(item.mercado)}">
                             Subtotal: ${formatarPreco(subtotalMercado)}
                         </span>
                     </div>
@@ -892,7 +1194,7 @@ async function renderizarLista() {
         return `
             ${blocoMercado}
 
-            <div class="item-lista d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="item-lista d-flex justify-content-between align-items-center flex-wrap gap-3" data-id="${escaparHtml(item.id)}">
                 <div class="form-check">
                     <input
                         class="form-check-input checkbox-item"
@@ -908,12 +1210,12 @@ async function renderizarLista() {
                 </div>
 
                 <div class="d-flex align-items-center gap-2 flex-wrap lista-item-acoes">
-                    <span class="fw-semibold">${formatarPreco(item.preco * item.quantidade)}</span>
+                    <span class="fw-semibold lista-item-total">${formatarPreco(item.preco * item.quantidade)}</span>
                     <small class="text-muted">(${formatarPreco(item.preco)} un.)</small>
 
                     <div class="btn-group btn-group-sm" role="group" aria-label="Quantidade">
-                        <button type="button" class="btn btn-outline-secondary quantidade-item" data-id="${escaparHtml(item.id)}" data-acao="diminuir">-</button>
-                        <span class="btn btn-outline-secondary disabled">x${item.quantidade}</span>
+                        <button type="button" class="btn btn-outline-secondary quantidade-item" data-id="${escaparHtml(item.id)}" data-acao="diminuir" ${item.quantidade <= 1 ? "disabled" : ""}>-</button>
+                        <span class="btn btn-outline-secondary disabled lista-item-quantidade">x${item.quantidade}</span>
                         <button type="button" class="btn btn-outline-secondary quantidade-item" data-id="${escaparHtml(item.id)}" data-acao="aumentar">+</button>
                     </div>
 
@@ -934,6 +1236,7 @@ async function renderizarLista() {
     estrategiaRenderId++;
     calcularEstrategia(listaOriginal, estrategiaRenderId);
     ativarEventos();
+    restaurarRolagem(posicaoRolagem);
 }
 
 document.addEventListener("DOMContentLoaded", function () {
